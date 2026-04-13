@@ -11,6 +11,8 @@ const classes = [
   "V8 Pro","V8 N/A","6 Cyl Pro","6 Cyl N/A","4Cyl Open/Rotary"
 ];
 
+const deductionsList = ["Reversing","Stopping","Barrier","Fire"];
+
 export default function App(){
 
   const [screen,setScreen] = useState("home");
@@ -25,9 +27,19 @@ export default function App(){
   const [carClass,setCarClass] = useState("");
 
   const [scores,setScores] = useState({});
+  const [deductions,setDeductions] = useState({});
+  const [tyres,setTyres] = useState({left:false,right:false});
 
   function setScore(cat,val){
     setScores(prev=>({...prev,[cat]:val}));
+  }
+
+  function toggleDeduction(d){
+    setDeductions(prev=>({...prev,[d]:!prev[d]}));
+  }
+
+  function toggleTyre(side){
+    setTyres(prev=>({...prev,[side]:!prev[side]}));
   }
 
   function submit(){
@@ -42,8 +54,19 @@ export default function App(){
       return;
     }
 
-    // 🔥 instant reset (fast)
+    const tyreScore = (tyres.left?5:0)+(tyres.right?5:0);
+    const deductionTotal = Object.values(deductions).filter(v=>v).length*10;
+
+    const total = Object.values(scores).reduce((a,b)=>a+b,0);
+
+    const finalScore = total + tyreScore - deductionTotal;
+
+    console.log("FINAL SCORE:", finalScore);
+
+    // RESET FAST
     setScores({});
+    setDeductions({});
+    setTyres({left:false,right:false});
     setCar("");
     setDriver("");
     setRego("");
@@ -54,22 +77,20 @@ export default function App(){
     alert("Score Saved ✅");
   }
 
-  const btn = {padding:10,margin:4};
-  const active = {padding:10,margin:4,background:"red",color:"#fff"};
+  const btn = {padding:12,margin:6,borderRadius:6};
+  const active = {padding:12,margin:6,borderRadius:6,background:"red",color:"#fff"};
   const big = {padding:16,margin:10,background:"#000",color:"#fff"};
+  const row = {marginBottom:20};
 
-  // HOME
   if(screen==="home"){
     return (
       <div style={{height:"100vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
         <h1>AutoFest Burnout Champs</h1>
-
         <button style={big} onClick={()=>setScreen("judges")}>Start Judging</button>
       </div>
     );
   }
 
-  // JUDGE SELECT
   if(screen==="judges"){
     return (
       <div style={{padding:20}}>
@@ -82,7 +103,6 @@ export default function App(){
     );
   }
 
-  // SCORING
   return (
     <div style={{padding:20}}>
 
@@ -93,12 +113,12 @@ export default function App(){
       <input placeholder="Rego" value={rego} onChange={e=>setRego(e.target.value)} />
       <input placeholder="Car Name" value={carName} onChange={e=>setCarName(e.target.value)} />
 
-      <div>
+      <div style={row}>
         <button style={gender==="Male"?active:btn} onClick={()=>setGender("Male")}>Male</button>
         <button style={gender==="Female"?active:btn} onClick={()=>setGender("Female")}>Female</button>
       </div>
 
-      <div>
+      <div style={row}>
         {classes.map(c=>(
           <button key={c} style={carClass===c?active:btn} onClick={()=>setCarClass(c)}>
             {c}
@@ -107,7 +127,7 @@ export default function App(){
       </div>
 
       {categories.map(cat=>(
-        <div key={cat}>
+        <div key={cat} style={row}>
           <strong>{cat}</strong><br/>
           {Array.from({length:21},(_,i)=>(
             <button key={i} style={scores[cat]===i?active:btn} onClick={()=>setScore(cat,i)}>
@@ -117,8 +137,23 @@ export default function App(){
         </div>
       ))}
 
+      <div style={row}>
+        <strong>Blown Tyres (5 pts each)</strong><br/>
+        <button style={tyres.left?active:btn} onClick={()=>toggleTyre("left")}>Left</button>
+        <button style={tyres.right?active:btn} onClick={()=>toggleTyre("right")}>Right</button>
+      </div>
+
+      <div style={row}>
+        <strong>Deductions</strong><br/>
+        {deductionsList.map(d=>(
+          <button key={d} style={deductions[d]?active:btn} onClick={()=>toggleDeduction(d)}>
+            {d}
+          </button>
+        ))}
+      </div>
+
       <button style={big} onClick={submit}>Submit</button>
-      <button style={big} onClick={()=>setScreen("home")}>Home</button>
+      <button style={big} onClick={()=>setScreen("home")}>Return Home</button>
 
     </div>
   );
