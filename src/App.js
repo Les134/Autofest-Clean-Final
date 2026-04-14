@@ -100,7 +100,6 @@ export default function App(){
   };
 
   const sorted = [...entries].sort((a,b)=>b.finalScore-a.finalScore);
-
   const top150 = sorted.slice(0,150);
   const top30 = top150.slice(0,30);
 
@@ -135,6 +134,92 @@ export default function App(){
     );
   }
 
+  // SETUP
+  if(screen==="setup"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Event Setup</h2>
+
+        <input
+          placeholder="Event Name"
+          value={eventName}
+          onChange={(e)=>setEventName(e.target.value)}
+        />
+
+        {judges.map((j,i)=>(
+          <input
+            key={i}
+            placeholder={`Judge ${i+1}`}
+            value={j}
+            onChange={(e)=>{
+              const copy=[...judges];
+              copy[i]=e.target.value;
+              setJudges(copy);
+            }}
+          />
+        ))}
+
+        <button style={big} onClick={startEvent}>Start Event</button>
+        <button style={big} onClick={()=>setScreen("home")}>Back</button>
+      </div>
+    );
+  }
+
+  // JUDGE SELECT
+  if(screen==="judgeSelect"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Select Judge</h2>
+
+        {judges.map((j,i)=>(
+          <button key={i} style={big} onClick={()=>{setActiveJudge(j);setScreen("score")}}>
+            {j}
+          </button>
+        ))}
+
+        <button style={big} onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
+  // LEADERBOARD
+  if(screen==="leader"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Leaderboard</h2>
+
+        {sorted.map((e,i)=>(
+          <div key={i}>
+            #{i+1} | Car {e.car} | {e.carClass} | {e.gender} | {e.finalScore}
+          </div>
+        ))}
+
+        <button style={big} onClick={()=>window.print()}>Print</button>
+        <button style={big} onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
+  // CLASS LEADERBOARD
+  if(screen==="classLeader"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Leaderboard by Class</h2>
+
+        {Object.keys(grouped).map(group=>(
+          <div key={group}>
+            <h3>{group}</h3>
+            {grouped[group].map((e,i)=>(
+              <div key={i}>#{i+1} | Car {e.car} | {e.finalScore}</div>
+            ))}
+          </div>
+        ))}
+
+        <button style={big} onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
   // TOP 150
   if(screen==="top150"){
     return (
@@ -161,45 +246,7 @@ export default function App(){
     );
   }
 
-  // CLASS LEADERBOARD
-  if(screen==="classLeader"){
-    return (
-      <div style={{padding:20}}>
-        <h2>Leaderboard by Class</h2>
-
-        {Object.keys(grouped).map(group=>(
-          <div key={group}>
-            <h3>{group}</h3>
-            {grouped[group].map((e,i)=>(
-              <div key={i}>#{i+1} | Car {e.car} | {e.finalScore}</div>
-            ))}
-          </div>
-        ))}
-
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  // LEADERBOARD
-  if(screen==="leader"){
-    return (
-      <div style={{padding:20}}>
-        <h2>Leaderboard</h2>
-
-        {sorted.map((e,i)=>(
-          <div key={i}>
-            #{i+1} | Car {e.car} | {e.carClass} | {e.gender} | {e.finalScore}
-          </div>
-        ))}
-
-        <button style={big} onClick={()=>window.print()}>Print</button>
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  // SCOREBOARD (same working version)
+  // SCOREBOARD
   if(screen==="score"){
     const row = {marginBottom:30};
 
