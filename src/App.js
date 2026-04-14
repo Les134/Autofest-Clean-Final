@@ -11,7 +11,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 🔒 ADMIN PIN
 const ADMIN_PIN = "1234";
 
 const categories = [
@@ -48,12 +47,9 @@ export default function App(){
 
   const [saving,setSaving] = useState(false);
 
-  // 🔥 LIVE SYNC
+  // 🔥 SAFE LIVE SYNC
   useEffect(()=>{
-    if(!eventName){
-      setEntries([]);
-      return;
-    }
+    if(!eventName) return;
 
     const unsub = onSnapshot(collection(db,"scores"),(snap)=>{
       const data = snap.docs.map(d=>d.data())
@@ -64,7 +60,6 @@ export default function App(){
     return ()=>unsub();
   },[eventName]);
 
-  // START EVENT
   const startEvent = ()=>{
     const valid = judges.filter(j=>j.trim() !== "");
     if(!eventName) return alert("Enter event name");
@@ -81,36 +76,40 @@ export default function App(){
     alert("Event Locked 🔒");
   };
 
-  // SUBMIT SCORE
   const submit = async ()=>{
-    if(saving) return;
-    if(locked) return alert("Event locked");
+    if(saving || locked) return;
 
     setSaving(true);
 
-    const base = Object.values(scores).reduce((a,b)=>a+b,0);
-    const tyresScore = (tyres.left?5:0)+(tyres.right?5:0);
-    const deductionsTotal = Object.values(deductions).filter(v=>v).length*10;
+    try{
+      const base = Object.values(scores).reduce((a,b)=>a+b,0);
+      const tyresScore = (tyres.left?5:0)+(tyres.right?5:0);
+      const deductionsTotal = Object.values(deductions).filter(v=>v).length*10;
 
-    const finalScore = base + tyresScore - deductionsTotal;
+      const finalScore = base + tyresScore - deductionsTotal;
 
-    await addDoc(collection(db,"scores"),{
-      eventName,
-      judge: activeJudge,
-      car,
-      gender,
-      carClass,
-      finalScore,
-      time: Date.now()
-    });
+      await addDoc(collection(db,"scores"),{
+        eventName,
+        judge: activeJudge,
+        car,
+        gender,
+        carClass,
+        finalScore,
+        time: Date.now()
+      });
 
-    // RESET
-    setScores({});
-    setDeductions({});
-    setTyres({left:false,right:false});
-    setCar("");
-    setGender("");
-    setCarClass("");
+      // RESET
+      setScores({});
+      setDeductions({});
+      setTyres({left:false,right:false});
+      setCar("");
+      setGender("");
+      setCarClass("");
+
+    } catch(err){
+      console.error(err);
+      alert("Save failed");
+    }
 
     setSaving(false);
   };
@@ -162,7 +161,6 @@ export default function App(){
             <button style={big} onClick={()=>setScreen("femaleLeader")}>Female Overall</button>
             <button style={big} onClick={()=>setScreen("top150")}>Top 150</button>
             <button style={big} onClick={()=>setScreen("top30")}>Top 30 Finals</button>
-            <button style={big} onClick={()=>setScreen("tv")}>Live Screen</button>
             <button style={big} onClick={lockEvent}>Lock Event</button>
           </>
         )}
@@ -200,7 +198,6 @@ export default function App(){
         ))}
 
         <button style={big} onClick={startEvent}>Start Event</button>
-        <button style={big} onClick={()=>setScreen("home")}>Back</button>
       </div>
     );
   }
@@ -215,44 +212,6 @@ export default function App(){
             {j}
           </button>
         ))}
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  // LEADERBOARDS
-  if(screen==="leader") return <div style={{padding:20}}><h2>Leaderboard</h2>{renderList(sorted)}{printBtn}<button style={big} onClick={()=>setScreen("home")}>Home</button></div>;
-  if(screen==="top150") return <div style={{padding:20}}><h2>Top 150</h2>{renderList(top150)}{printBtn}<button style={big} onClick={()=>setScreen("home")}>Home</button></div>;
-  if(screen==="top30") return <div style={{padding:20}}><h2>Top 30</h2>{renderList(top30)}{printBtn}<button style={big} onClick={()=>setScreen("home")}>Home</button></div>;
-  if(screen==="femaleLeader") return <div style={{padding:20}}><h2>Female Overall</h2>{renderList(femaleOverall)}{printBtn}<button style={big} onClick={()=>setScreen("home")}>Home</button></div>;
-
-  if(screen==="classLeader"){
-    return (
-      <div style={{padding:20}}>
-        <h2>Class Leaderboard</h2>
-        {Object.keys(grouped).map(g=>(
-          <div key={g}>
-            <h3>{g}</h3>
-            {renderList(grouped[g].sort((a,b)=>b.finalScore-a.finalScore))}
-          </div>
-        ))}
-        {printBtn}
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  // TV
-  if(screen==="tv"){
-    return (
-      <div style={{padding:40,background:"#000",color:"#fff",minHeight:"100vh"}}>
-        <h1>LIVE</h1>
-        {sorted.slice(0,10).map((e,i)=>(
-          <div key={i} style={{fontSize:30}}>
-            #{i+1} Car {e.car} - {e.finalScore}
-          </div>
-        ))}
-        <button style={big} onClick={()=>setScreen("home")}>Exit</button>
       </div>
     );
   }
@@ -261,7 +220,7 @@ export default function App(){
   if(screen==="score"){
     const row={marginBottom:30};
     const btn={padding:14,margin:6};
-    const active={padding:14,margin:6,background:"red",color:"#fff"};
+    const active={...btn,background:"red",color:"#fff"};
 
     return (
       <div style={{padding:20}}>
@@ -296,19 +255,10 @@ export default function App(){
           <button style={tyres.right?active:btn} onClick={()=>setTyres({...tyres,right:!tyres.right})}>Right</button>
         </div>
 
-        <div style={row}>
-          <strong>Deductions</strong><br/>
-          {deductionsList.map(d=>(
-            <button key={d} style={deductions[d]?active:btn}
-              onClick={()=>setDeductions({...deductions,[d]:!deductions[d]})}>{d}</button>
-          ))}
-        </div>
-
         <button style={big} onClick={submit}>{saving?"Saving...":"Submit & Next"}</button>
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
       </div>
     );
   }
 
-  return <div style={{padding:20}}>Loading...</div>;
+  return <div>Loading...</div>;
 }
