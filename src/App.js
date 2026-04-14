@@ -28,6 +28,8 @@ export default function App(){
 
   const [screen,setScreen] = useState("home");
   const [entries,setEntries] = useState([]);
+  const [archivedEvents,setArchivedEvents] = useState([]);
+
   const [saving,setSaving] = useState(false);
 
   const [eventName,setEventName] = useState("");
@@ -48,7 +50,7 @@ export default function App(){
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({left:false,right:false});
 
-  // 🔥 CLEAN EVENT FILTER (FIXED)
+  // 🔥 CURRENT EVENT DATA ONLY
   useEffect(()=>{
     if(!eventName){
       setEntries([]);
@@ -65,6 +67,14 @@ export default function App(){
 
     return ()=>unsub();
   },[eventName]);
+
+  // 🔥 ARCHIVED EVENTS
+  useEffect(()=>{
+    const unsub = onSnapshot(collection(db,"archivedEvents"),(snap)=>{
+      setArchivedEvents(snap.docs.map(doc=>doc.data()));
+    });
+    return ()=>unsub();
+  },[]);
 
   const setScore = (cat,val)=> setScores({...scores,[cat]:val});
   const toggleDeduction = (d)=> setDeductions({...deductions,[d]:!deductions[d]});
@@ -106,9 +116,25 @@ export default function App(){
     setSaving(false);
   };
 
+  const archiveEvent = async ()=>{
+    if(!eventName) return;
+
+    await addDoc(collection(db,"archivedEvents"),{
+      eventName,
+      results: entries,
+      archivedAt: Date.now()
+    });
+
+    setEntries([]);
+    setEventName("");
+    setEventActive(false);
+    setScreen("home");
+
+    alert("Event Archived ✅");
+  };
+
   const sorted = [...entries].sort((a,b)=>b.finalScore - a.finalScore);
 
-  // GROUPED
   const grouped = {};
   sorted.forEach(e=>{
     const key = `${e.carClass} - ${e.gender}`;
@@ -116,7 +142,6 @@ export default function App(){
     grouped[key].push(e);
   });
 
-  // 🎨 STYLES
   const big = {padding:18,margin:10,width:"100%",fontSize:18};
   const row = {marginBottom:25};
 
@@ -138,7 +163,7 @@ export default function App(){
       <div style={{padding:20}}>
         <h1>AutoFest System</h1>
 
-        <button style={big} onClick={()=>setScreen("setup")}>Event Log / New Event</button>
+        <button style={big} onClick={()=>setScreen("setup")}>New Event</button>
 
         {eventActive && (
           <>
@@ -146,9 +171,27 @@ export default function App(){
             <button style={big} onClick={()=>setScreen("score")}>Resume Judging</button>
             <button style={big} onClick={()=>setScreen("leader")}>Leaderboard</button>
             <button style={big} onClick={()=>setScreen("classLeader")}>Leaderboard by Class</button>
-            <button style={big} onClick={()=>window.print()}>Print Results</button>
+            <button style={big} onClick={()=>setScreen("eventLog")}>Event Log</button>
           </>
         )}
+      </div>
+    );
+  }
+
+  // EVENT LOG
+  if(screen==="eventLog"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Archived Events</h2>
+
+        {archivedEvents.map((e,i)=>(
+          <div key={i} style={{marginBottom:20}}>
+            <strong>{e.eventName}</strong><br/>
+            <button onClick={()=>window.print()}>Print</button>
+          </div>
+        ))}
+
+        <button style={big} onClick={()=>setScreen("home")}>Home</button>
       </div>
     );
   }
@@ -207,6 +250,7 @@ export default function App(){
           </div>
         ))}
 
+        <button style={big} onClick={archiveEvent}>Archive Event</button>
         <button style={big} onClick={()=>window.print()}>Print</button>
         <button style={big} onClick={()=>setScreen("home")}>Home</button>
       </div>
