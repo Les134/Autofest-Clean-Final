@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const categories = [
   "Instant Smoke",
@@ -39,6 +39,8 @@ export default function App(){
   const [tyres,setTyres] = useState({left:false,right:false});
 
   const [saving,setSaving] = useState(false);
+
+  const carInputRef = useRef(null);
 
   // LOAD DATA
   useEffect(()=>{
@@ -137,12 +139,23 @@ export default function App(){
       return [...prev];
     });
 
+    // CLEAN RESET
     setScores({});
     setDeductions({});
     setTyres({ left: false, right: false });
     setCar("");
+    setGender("");
+    setCarClass("");
     setSaving(false);
+
     window.scrollTo(0,0);
+
+    // AUTO FOCUS
+    setTimeout(()=>{
+      if(carInputRef.current){
+        carInputRef.current.focus();
+      }
+    },100);
   };
 
   // CALCULATE TOTALS
@@ -176,20 +189,12 @@ export default function App(){
   const active={...btn,background:"red",color:"#fff"};
   const classActive={...btn,background:"green",color:"#fff"};
 
-  const renderList = (list)=>list.map((e,i)=>{
-    const totalJudges = e.runs.reduce(
-      (acc, run) => acc + Object.keys(run.judgeScores).length,
-      0
-    );
-
-    return (
-      <div key={i}>
-        #{i+1} | Car {e.car} | {e.gender} | Score {e.finalScore}
-        <br/>
-        Runs: {e.runs.length} | Judge Scores: {totalJudges}
-      </div>
-    );
-  });
+  // CLEAN LIST (no debug text)
+  const renderList = (list)=>list.map((e,i)=>(
+    <div key={i}>
+      #{i+1} | Car {e.car} | {e.gender} | Score {e.finalScore}
+    </div>
+  ));
 
   // ARCHIVE EVENT
   const archiveEvent = () => {
@@ -275,7 +280,12 @@ export default function App(){
       <div style={{padding:20,maxWidth:600,margin:"auto"}}>
         <h3>{eventName} | {activeJudge}</h3>
 
-        <input value={car} onChange={(e)=>setCar(e.target.value)} placeholder="Entrant No"/>
+        <input
+          ref={carInputRef}
+          value={car}
+          onChange={(e)=>setCar(e.target.value)}
+          placeholder="Entrant No"
+        />
 
         <div style={row}>
           <button style={gender==="Male"?active:btn} onClick={()=>setGender("Male")}>Male</button>
@@ -331,8 +341,7 @@ export default function App(){
     );
   }
 
-  // LEADERBOARDS (ALL INCLUDE PRINT + LOCK + ARCHIVE)
-
+  // REUSABLE LEADERBOARD SCREEN
   const leaderboardScreen = (title, list) => (
     <div style={{padding:20,maxWidth:600,margin:"auto"}}>
       <h2>{title}</h2>
@@ -380,7 +389,7 @@ export default function App(){
     );
   }
 
-  // ARCHIVE SCREEN
+  // ARCHIVE
   if(screen==="archive"){
     return (
       <div style={{padding:20,maxWidth:600,margin:"auto"}}>
