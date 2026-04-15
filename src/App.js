@@ -95,7 +95,8 @@ export default function App(){
 
     const base = Object.values(scores).reduce((a,b)=>a+b,0);
     const tyreScore = (tyres.left?5:0)+(tyres.right?5:0);
-    const deductionTotal = Object.values(deductions).filter(v=>v).length*10;
+    const activeDeductions = Object.keys(deductions).filter(d=>deductions[d]);
+    const deductionTotal = activeDeductions.length * 10;
 
     const finalScore = base + tyreScore - deductionTotal;
 
@@ -112,11 +113,11 @@ export default function App(){
         car,
         gender,
         carClass,
-        finalScore
+        finalScore,
+        deductions: activeDeductions
       }]);
     }
 
-    // RESET
     setScores({});
     setDeductions({});
     setTyres({left:false,right:false});
@@ -150,7 +151,6 @@ export default function App(){
     alert("Event archived");
   };
 
-  // SORTING
   const sorted = [...entries].sort((a,b)=>b.finalScore-a.finalScore);
   const top150 = sorted.slice(0,150);
   const top30 = top150.slice(0,30);
@@ -282,7 +282,6 @@ export default function App(){
           </div>
         ))}
 
-        {/* 🔥 RESTORED SECTIONS */}
         <div style={row}>
           <strong>Blown Tyres (+5)</strong><br/>
           <button style={tyres.left?active:btn} onClick={()=>setTyres({...tyres,left:!tyres.left})}>Left</button>
@@ -318,10 +317,22 @@ export default function App(){
     return(
       <div style={{padding:20}}>
         <h2>Class Leaderboard</h2>
+
         {Object.keys(grouped).map(k=>(
           <div key={k}>
             <h3>{k}</h3>
-            {renderList(grouped[k])}
+
+            {grouped[k].map((e,i)=>(
+              <div key={i}>
+                #{i+1} | Car {e.car} | {e.gender}
+                {e.deductions && e.deductions.length > 0 && (
+                  <span style={{color:"red",marginLeft:8}}>
+                    | Less Deduction {e.deductions.join(", ")}
+                  </span>
+                )}
+                {" "} - Score {e.finalScore}
+              </div>
+            ))}
           </div>
         ))}
 
