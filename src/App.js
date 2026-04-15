@@ -37,11 +37,12 @@ export default function App(){
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({left:false,right:false});
 
-  // 🔥 LIVE SYNC FROM FIREBASE
+  // 🔥 LIVE SYNC
   useEffect(()=>{
     const unsub = onSnapshot(collection(db,"scores"), snap=>{
       const data = snap.docs.map(doc => doc.data());
       setEntries(data);
+      console.log("LIVE DATA:", data);
     });
 
     return ()=>unsub();
@@ -57,8 +58,10 @@ export default function App(){
     setScreen("judge");
   };
 
-  // 🔥 SUBMIT SCORE TO FIREBASE
+  // 🔥 SUBMIT (FINAL FIXED VERSION)
   const submit = async ()=>{
+
+    console.log("SUBMIT CLICKED");
 
     if(!car) return alert("Enter entrant number");
     if(!gender) return alert("Select gender");
@@ -75,15 +78,23 @@ export default function App(){
 
     const finalScore = base + tyreScore - deductionTotal;
 
-    await addDoc(collection(db,"scores"),{
-      car,
-      gender,
-      carClass,
-      finalScore,
-      deductions: activeDeductions,
-      judge: activeJudge,
-      created: new Date()
-    });
+    try {
+      await addDoc(collection(db,"scores"),{
+        car,
+        gender,
+        carClass,
+        finalScore,
+        deductions: activeDeductions,
+        judge: activeJudge,
+        created: new Date()
+      });
+
+      console.log("SUCCESS WRITTEN TO FIREBASE");
+
+    } catch (err) {
+      console.error("FIREBASE ERROR:", err);
+      alert("Error saving score");
+    }
 
     // RESET
     setScores({});
