@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { collection, addDoc, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs
+} from "firebase/firestore";
 
 const categories = [
   "Instant Smoke",
@@ -19,6 +27,7 @@ export default function App(){
 
   const [screen,setScreen] = useState("home");
   const [entries,setEntries] = useState([]);
+  const [archives,setArchives] = useState([]);
 
   const [eventName,setEventName] = useState("");
   const [eventLocked,setEventLocked] = useState(false);
@@ -34,11 +43,33 @@ export default function App(){
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({left:false,right:false});
 
+  // 🔥 LIVE SCORES
   useEffect(()=>{
     const unsub = onSnapshot(collection(db,"scores"), snap=>{
       setEntries(snap.docs.map(doc=>doc.data()) || []);
     });
     return ()=>unsub();
+  },[]);
+
+  // 🔒 GLOBAL LOCK LISTENER
+  useEffect(()=>{
+    const fetchLock = async ()=>{
+      const ref = doc(db,"settings","event");
+      const snap = await getDoc(ref);
+      if(snap.exists()){
+        setEventLocked(snap.data().locked);
+      }
+    };
+    fetchLock();
+  },[]);
+
+  // 🗂 LOAD ARCHIVES
+  useEffect(()=>{
+    const load = async ()=>{
+      const snap = await getDocs(collection(db,"archive"));
+      setArchives(snap.docs.map(d=>d.data()));
+    };
+    load();
   },[]);
 
   const startEvent = ()=>{
@@ -51,7 +82,7 @@ export default function App(){
   };
 
   const submit = async ()=>{
-    if(eventLocked) return alert("Event locked");
+    if(eventLocked) return alert("Event is LOCKED");
 
     if(!car || !gender || !carClass) return alert("Complete fields");
 
@@ -80,6 +111,27 @@ export default function App(){
     setCarClass("");
   };
 
+  // 🔒 LOCK EVENT (GLOBAL)
+  const lockEvent = async ()=>{
+    await setDoc(doc(db,"settings","event"),{
+      locked:true
+    });
+    setEventLocked(true);
+    alert("Event Locked 🔒");
+  };
+
+  // 🗂 ARCHIVE
+  const archiveEvent = async ()=>{
+    await addDoc(collection(db,"archive"),{
+      eventName,
+      results: entries,
+      created: new Date().toISOString()
+    });
+    alert("Archived ✅");
+  };
+
+  const printResults = ()=> window.print();
+
   const sorted = [...entries].sort((a,b)=>b.finalScore-a.finalScore);
 
   const renderList = (list)=>(
@@ -102,13 +154,68 @@ export default function App(){
 
   const big={padding:18,margin:10,width:"100%"};
 
+  // HOME
   if(screen==="home"){
     return(
       <div style={{padding:20}}>
-        <h1>🔥 AUTOFEST 🔥</h1>
+        <h1>🔥 AUTOFEST PRO 🔥</h1>
+
         <button style={big} onClick={()=>setScreen("setup")}>New Event</button>
         <button style={big} onClick={()=>setScreen("leader")}>Leaderboard</button>
         <button style={big} onClick={()=>setScreen("classes")}>Class Leaderboards</button>
+        <button style={big} onClick={()=>setScreen("archive")}>Archive</button>
+      </div>
+    );
+  }
+
+  if(screen==="archive"){
+    return(
+      <div style={{padding:20}}>
+        <h2>Archived Events</h2>
+
+        {archives.map((a,i)=>(
+          <div key={i}>
+            <strong>{a.eventName}</strong>
+            <div>{a.results?.length} entries</div>
+          </div>
+        ))}
+
+        <button style={big} onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
+  if(screen==="leader"){
+    return(
+      <div style={{padding:20}}>
+        <h2>Leaderboard</h2>
+
+        {renderList(sorted)}
+
+        <div style={{marginTop:20}}>
+          <button onClick={lockEvent}>🔒 Lock</button>
+          <button onClick={archiveEvent}>🗂 Archive</button>
+          <button onClick={printResults}>🖨 Print</button>
+        </div>
+
+        <button style={big} onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
+  if(screen==="classes"){
+    return(
+      <div style={{padding:20}}>
+        <h2>Class Leaderboards</h2>
+
+        {classes.map(c=>(
+          <div key={c}>
+            <h3>{c}</h3>
+            {renderList(grouped[c])}
+          </div>
+        ))}
+
+        <button style={big} onClick={()=>setScreen("home")}>Home</button>
       </div>
     );
   }
@@ -166,31 +273,6 @@ export default function App(){
         ))}
 
         <button style={big} onClick={submit}>Submit</button>
-      </div>
-    );
-  }
-
-  if(screen==="leader"){
-    return(
-      <div style={{padding:20}}>
-        <h2>Leaderboard</h2>
-        {renderList(sorted)}
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  if(screen==="classes"){
-    return(
-      <div style={{padding:20}}>
-        <h2>Class Leaderboards</h2>
-        {classes.map(c=>(
-          <div key={c}>
-            <h3>{c}</h3>
-            {renderList(grouped[c])}
-          </div>
-        ))}
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
       </div>
     );
   }
