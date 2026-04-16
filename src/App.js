@@ -6,7 +6,9 @@ import {
   onSnapshot,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  getDocs,
+  deleteDoc
 } from "firebase/firestore";
 
 const categories = [
@@ -57,10 +59,22 @@ export default function App(){
     load();
   },[]);
 
-  const startEvent = ()=>{
+  // 🔥 START EVENT (CLEARS OLD DATA)
+  const startEvent = async ()=>{
+
     const valid = judges.filter(j=>j.trim() !== "");
     if(!eventName) return alert("Enter event name");
-    if(valid.length === 0) return alert("Add judge");
+    if(valid.length === 0) return alert("Add at least 1 judge");
+
+    // CLEAR OLD SCORES
+    const snapshot = await getDocs(collection(db,"scores"));
+    for (const docItem of snapshot.docs){
+      await deleteDoc(docItem.ref);
+    }
+
+    // RESET LOCK
+    await setDoc(doc(db,"settings","event"),{locked:false});
+    setEventLocked(false);
 
     setJudges(valid);
     setScreen("judge");
@@ -92,7 +106,7 @@ export default function App(){
       created: new Date().toISOString()
     });
 
-    // RESET (IMPORTANT)
+    // RESET FORM
     setScores({});
     setDeductions({});
     setTyres({left:false,right:false});
@@ -112,16 +126,20 @@ export default function App(){
 
   const big={padding:18,margin:10,width:"100%",fontSize:18};
 
+  // 🔥 EXACT LEADERBOARD FORMAT
   const renderList = (list)=>(
-    (list||[]).map((e,i)=>(
-      <div key={i}>
-        #{i+1} | Car {e.car} | {e.gender}
-        {e.deductions?.length>0 && (
-          <> | Less Deduction {e.deductions.join(", ")}</>
-        )}
-        {" "} - Score {e.finalScore}
-      </div>
-    ))
+    (list||[]).map((e,i)=>{
+
+      let text = `#${i+1} | Car ${e.car} | ${e.gender}`;
+
+      if(e.deductions && e.deductions.length > 0){
+        text += ` | Less Deduction ${e.deductions.join(", ")}`;
+      }
+
+      text += ` - Score ${e.finalScore}`;
+
+      return <div key={i}>{text}</div>;
+    })
   );
 
   // 🏠 HOME
@@ -166,7 +184,7 @@ export default function App(){
     );
   }
 
-  // JUDGE LOGIN
+  // JUDGE
   if(screen==="judge"){
     return(
       <div style={{padding:20}}>
@@ -194,19 +212,12 @@ export default function App(){
           onChange={(e)=>setCar(e.target.value)}
           placeholder="Entrant No"/>
 
-        <div>
-          <button onClick={()=>setGender("Male")}>Male</button>
-          <button onClick={()=>setGender("Female")}>Female</button>
-        </div>
+        <button onClick={()=>setGender("Male")}>Male</button>
+        <button onClick={()=>setGender("Female")}>Female</button>
 
-        <div>
-          {classes.map(c=>(
-            <button key={c}
-              onClick={()=>setCarClass(c)}>
-              {c}
-            </button>
-          ))}
-        </div>
+        {classes.map(c=>(
+          <button key={c} onClick={()=>setCarClass(c)}>{c}</button>
+        ))}
 
         {categories.map(cat=>(
           <div key={cat}>
@@ -258,7 +269,7 @@ export default function App(){
     );
   }
 
-  // CLASS LEADERBOARDS
+  // CLASSES
   if(screen==="classes"){
     return(
       <div style={{padding:20}}>
