@@ -80,6 +80,9 @@ export default function App(){
     </div>
   ));
 
+  // ALWAYS SAFE DEFAULT
+  if(!screen) setScreen("home");
+
   // HOME
   if(screen==="home"){
     return(
@@ -110,7 +113,6 @@ export default function App(){
           style={{width:"100%",padding:"14px",fontSize:"16px"}}
         />
 
-        {/* GENDER */}
         <div style={rowSpacing}>
           <button
             style={{
@@ -119,23 +121,18 @@ export default function App(){
               background: gender==="Male" ? "#00cc66" : "#eee"
             }}
             onClick={()=>setGender("Male")}
-          >
-            Male
-          </button>
+          >Male</button>
 
           <button
             style={{
               padding:"10px 20px",
               background: gender==="Female" ? "#007bff" : "#eee",
-              color: gender==="Female" ? "#fff" : "#000"
+              color:"#fff"
             }}
             onClick={()=>setGender("Female")}
-          >
-            Female
-          </button>
+          >Female</button>
         </div>
 
-        {/* CLASS */}
         <div style={rowSpacing}>
           {classes.map(c=>(
             <button key={c}
@@ -152,16 +149,13 @@ export default function App(){
           ))}
         </div>
 
-        {/* SCORES */}
         {categories.map(cat=>(
           <div key={cat} style={rowSpacing}>
             <div style={{display:"flex",alignItems:"center"}}>
 
-              <div style={{width:"160px",fontSize:"14px"}}>
-                {cat}
-              </div>
+              <div style={{width:"160px"}}>{cat}</div>
 
-              <div style={{display:"flex",flexWrap:"nowrap"}}>
+              <div style={{display:"flex"}}>
                 {Array.from({length:21},(_,i)=>(
                   <button key={i}
                     style={{
@@ -180,18 +174,12 @@ export default function App(){
           </div>
         ))}
 
-        {/* TYRES */}
         <div style={rowSpacing}>
           <strong>Blown Tyres (+5)</strong><br/>
-          <button onClick={()=>setTyres({...tyres,left:!tyres.left})}>
-            Left
-          </button>
-          <button onClick={()=>setTyres({...tyres,right:!tyres.right})}>
-            Right
-          </button>
+          <button onClick={()=>setTyres({...tyres,left:!tyres.left})}>Left</button>
+          <button onClick={()=>setTyres({...tyres,right:!tyres.right})}>Right</button>
         </div>
 
-        {/* DEDUCTIONS */}
         <div style={rowSpacing}>
           <strong>Deductions (-10)</strong><br/>
           {deductionsList.map(d=>(
@@ -209,7 +197,6 @@ export default function App(){
     );
   }
 
-  // LEADERBOARD
   if(screen==="leader"){
     return(
       <div style={{padding:20}}>
@@ -240,5 +227,5 @@ export default function App(){
     );
   }
 
-  return <div>Loading...</div>;
+  return null;
 }
