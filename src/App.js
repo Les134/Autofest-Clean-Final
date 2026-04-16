@@ -1,5 +1,4 @@
-import { initializeApp } from "firebase/app";
-      <div style={{ marginTop: 10 }}>
+// =========================================
         <button
           onClick={() => setEntrant({ ...entrant, gender: "Male" })}
           style={{
