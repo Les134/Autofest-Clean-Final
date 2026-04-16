@@ -31,7 +31,7 @@ export default function App(){
 
   const [saving,setSaving] = useState(false);
 
-  // FULL RESET
+  // RESET
   const fullReset = ()=>{
     if(!window.confirm("Start new event? EVERYTHING will be cleared")) return;
 
@@ -82,7 +82,6 @@ export default function App(){
 
     setEntries(prev => [...prev, entry]);
 
-    // RESET ENTRY
     setScores({});
     setDeductions({});
     setTyres({left:false,right:false});
@@ -93,7 +92,7 @@ export default function App(){
     setSaving(false);
   };
 
-  // DELETE ENTRY
+  // DELETE
   const deleteEntry = (carNo)=>{
     if(!window.confirm("Delete entry?")) return;
     setEntries(prev => prev.filter(e=>e.car!==carNo));
@@ -114,7 +113,7 @@ export default function App(){
   });
 
   const renderList = (list)=>list.map((e,i)=>(
-    <div key={i}>
+    <div key={i} style={{marginBottom:10}}>
       #{i+1} | Car {e.car} | {e.gender} | {e.carClass} | Score {e.finalScore}
       <button onClick={()=>deleteEntry(e.car)}>DEL</button>
     </div>
@@ -126,15 +125,19 @@ export default function App(){
       <div style={{padding:20}}>
         <h1>🏁 AUTOFEST SERIES</h1>
 
-        <button onClick={()=>setScreen("setup")}>New Event</button>
+        <button onClick={()=>setScreen("setup")}>New Event Setup</button>
         <button onClick={()=>setScreen("judge")}>Judge Login</button>
-        <button onClick={()=>setScreen("leader")}>Leaderboard</button>
+
+        <h3>Scoreboards</h3>
+        <button onClick={()=>setScreen("leader")}>Overall Leaderboard</button>
         <button onClick={()=>setScreen("class")}>Class Leaderboard</button>
         <button onClick={()=>setScreen("female")}>Female Overall</button>
         <button onClick={()=>setScreen("top150")}>Top 150</button>
         <button onClick={()=>setScreen("top30")}>Top 30 Finals</button>
 
-        <button onClick={fullReset}>FULL RESET EVENT</button>
+        <button onClick={fullReset} style={{background:"#444",color:"#fff"}}>
+          FULL RESET EVENT
+        </button>
       </div>
     );
   }
@@ -163,6 +166,7 @@ export default function App(){
         ))}
 
         <button onClick={startEvent}>Start Event</button>
+        <button onClick={()=>setScreen("home")}>Back</button>
       </div>
     );
   }
@@ -184,12 +188,12 @@ export default function App(){
           </button>
         ))}
 
-        <button onClick={()=>setScreen("home")}>Home</button>
+        <button onClick={()=>setScreen("home")}>Back</button>
       </div>
     );
   }
 
-  // SCORE
+  // SCORING
   if(screen==="score"){
     return(
       <div style={{padding:20}}>
@@ -240,15 +244,16 @@ export default function App(){
           {saving ? "Saving..." : "Submit & Next"}
         </button>
 
-        <button onClick={()=>setScreen("home")}>Home</button>
+        <button onClick={()=>setScreen("home")}>Back to Home</button>
       </div>
     );
   }
 
-  if(screen==="leader") return <div style={{padding:20}}><h2>Leaderboard</h2>{renderList(sorted)}</div>;
-  if(screen==="top150") return <div style={{padding:20}}><h2>Top 150</h2>{renderList(top150)}</div>;
-  if(screen==="top30") return <div style={{padding:20}}><h2>Top 30 Finals</h2>{renderList(top30)}</div>;
-  if(screen==="female") return <div style={{padding:20}}><h2>Female Overall</h2>{renderList(female)}</div>;
+  // LEADERBOARDS
+  if(screen==="leader") return <div style={{padding:20}}><h2>Overall Leaderboard</h2>{renderList(sorted)}<button onClick={()=>setScreen("home")}>Back</button></div>;
+  if(screen==="top150") return <div style={{padding:20}}><h2>Top 150</h2>{renderList(top150)}<button onClick={()=>setScreen("home")}>Back</button></div>;
+  if(screen==="top30") return <div style={{padding:20}}><h2>Top 30 Finals</h2>{renderList(top30)}<button onClick={()=>setScreen("home")}>Back</button></div>;
+  if(screen==="female") return <div style={{padding:20}}><h2>Female Overall</h2>{renderList(female)}<button onClick={()=>setScreen("home")}>Back</button></div>;
 
   if(screen==="class"){
     return(
@@ -260,6 +265,7 @@ export default function App(){
             {renderList(grouped[k])}
           </div>
         ))}
+        <button onClick={()=>setScreen("home")}>Back</button>
       </div>
     );
   }
