@@ -1,16 +1,24 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+  enableIndexedDbPersistence
+} from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCuvxgmnpr8EVRAN9y-AJCWGVOf0xi7sxk",
+  apiKey: "YOUR_API_KEY",
   authDomain: "autofestscoreapp.firebaseapp.com",
   projectId: "autofestscoreapp",
-  storageBucket: "autofestscoreapp.firebasestorage.app",
-  messagingSenderId: "293382914162",
-  appId: "1:293382914162:web:1c0ab2f637988819f9c2eb"
+  storageBucket: "autofestscoreapp.appspot.com",
+  messagingSenderId: "YOUR_ID",
+  appId: "YOUR_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// ✅ SAFE (won’t crash app if it fails)
+enableIndexedDbPersistence(db).catch((err) => {
+  console.log("Persistence error:", err);
+});
 
 export { db };
