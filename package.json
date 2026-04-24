@@ -1,21 +1,18 @@
 {
-  "name": "autofest-final",
+  "name": "autofest-clean",
   "version": "1.0.0",
   "private": true,
-
- "engines": {
-  "node": "18.x"
-}
-
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-scripts": "5.0.1",
     "firebase": "^10.12.0"
   },
-
   "scripts": {
     "start": "react-scripts start",
-    "build": "CI=false GENERATE_SOURCEMAP=false react-scripts build"
+    "build": "CI=false react-scripts build"
   }
 }
