@@ -11,6 +11,8 @@ import {
   deleteDoc
 } from "firebase/firestore";
 
+import { getAuth, signInAnonymously } from "firebase/auth";
+
 const firebaseConfig = {
   apiKey: "AIzaSyB5NhDJMBwhMpUUL3XIHUnISTuCeQkXKS8",
   authDomain: "autofest-burnout-judging-848fd.firebaseapp.com",
@@ -19,6 +21,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 // SCORE ROWS
 const categories = [
@@ -33,20 +36,12 @@ const deductionsList = ["Barrier","Reversing","Fail Off Pad","Fire"];
 export default function App(){
 
   const [screen,setScreen] = useState("home");
+  const [data,setData] = useState([]);
 
-  // ADMIN
-  const [adminPass,setAdminPass] = useState(localStorage.getItem("admin") || "");
-  const [isAdmin,setIsAdmin] = useState(false);
-
-  // EVENTS
   const [eventName,setEventName] = useState("");
   const [eventId,setEventId] = useState("");
   const [events,setEvents] = useState([]);
 
-  // DATA
-  const [data,setData] = useState([]);
-
-  // ENTRY
   const [driver,setDriver] = useState("");
   const [carNumber,setCarNumber] = useState("");
   const [carRego,setCarRego] = useState("");
@@ -54,6 +49,11 @@ export default function App(){
   const [scores,setScores] = useState({});
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({one:false,two:false});
+
+  // 🔐 AUTH (SECURITY FIX)
+  useEffect(()=>{
+    signInAnonymously(auth).catch(console.error);
+  },[]);
 
   // LOAD EVENTS
   useEffect(()=>{
@@ -73,55 +73,6 @@ export default function App(){
     return ()=>unsub();
   },[eventId]);
 
-  // ADMIN
-  function setAdmin(){
-    const pass = prompt("Set Admin Password");
-    if(pass){
-      localStorage.setItem("admin",pass);
-      setAdminPass(pass);
-    }
-  }
-
-  function loginAdmin(){
-    const pass = prompt("Enter Admin Password");
-    if(pass === adminPass){
-      setIsAdmin(true);
-      alert("Admin Logged In");
-    } else {
-      alert("Incorrect Password");
-    }
-  }
-
-  function deleteEvent(id){
-    if(!isAdmin) return alert("Admin Only");
-
-    deleteDoc(doc(db,"events",id)).then(()=>{
-      alert("Event Deleted");
-      window.location.reload();
-    });
-  }
-
-  // EVENT SETUP
-  function createEvent(){
-    if(!eventName) return alert("Enter Event Name");
-
-    const id = Date.now().toString();
-
-    setEventId(id);
-
-    setDoc(doc(db,"events",id),{
-      name:eventName
-    });
-
-    setScreen("score");
-  }
-
-  function loadEvent(e){
-    setEventId(e.id);
-    setEventName(e.name);
-    setScreen("leaderboard");
-  }
-
   // VALIDATION
   const entryValid =
     carNumber.trim() !== "" ||
@@ -133,7 +84,6 @@ export default function App(){
   }
 
   function toggleDeduction(d){
-    if(!entryValid) return;
     setDeductions(prev=>({...prev,[d]:!prev[d]}));
   }
 
@@ -152,7 +102,10 @@ export default function App(){
 
   function submit(){
 
-    if(!entryValid) return alert("Enter Car Number or Rego");
+    if(!entryValid){
+      alert("Enter Car Number or Rego");
+      return;
+    }
 
     const activeDeductions = Object.keys(deductions).filter(d=>deductions[d]);
 
@@ -195,11 +148,12 @@ export default function App(){
   const combined = combine();
 
   function format(e){
-    const name = `${e.driver} / ${e.carNumber || e.carRego}`;
+    const name = `${e.driver} / Car Number: ${e.carNumber || e.carRego}`;
     const ded = e.deductions?.length
       ? ` (${[...new Set(e.deductions)].join(", ")})`
       : "";
-    return `${name} - ${e.total}${ded}`;
+
+    return `${name} - Score: ${e.total}${ded}`;
   }
 
   // ---------------- HOME ----------------
@@ -207,72 +161,33 @@ export default function App(){
   if(screen==="home"){
     return (
       <div style={homeWrap}>
-
         <h1>🔥 AUTOFEST LIVE SYNC 🔥</h1>
 
-        <button style={menuBtn} onClick={()=>setScreen("eventSetup")}>Event Login / Setup</button>
+        <button style={menuBtn} onClick={()=>setScreen("eventSetup")}>Event Setup</button>
         <button style={menuBtn} onClick={()=>setScreen("score")}>Score Sheet</button>
+
         <button style={menuBtn} onClick={()=>setScreen("leaderboard")}>Leaderboard</button>
-        <button style={menuBtn} onClick={()=>setScreen("archive")}>Event Archive</button>
+        <button style={menuBtn} onClick={()=>setScreen("top150")}>Top 150</button>
+        <button style={menuBtn} onClick={()=>setScreen("top30")}>Top 30</button>
 
-        <button style={menuBtn} onClick={setAdmin}>Set Admin</button>
-        <button style={menuBtn} onClick={loginAdmin}>Admin Login</button>
-
+        <button style={menuBtn} onClick={()=>setScreen("archive")}>Archive</button>
       </div>
     );
   }
 
-  // ---------------- EVENT SETUP ----------------
+  // ---------------- TOP / LEADERBOARDS ----------------
 
-  if(screen==="eventSetup"){
+  if(screen==="leaderboard" || screen==="top150" || screen==="top30"){
+
+    let list = combined;
+    if(screen==="top150") list = combined.slice(0,150);
+    if(screen==="top30") list = combined.slice(0,30);
+
     return (
       <div style={{padding:20}}>
-        <h2>Create Event</h2>
+        <h2>{screen.toUpperCase()}</h2>
 
-        <input
-          placeholder="Event Name"
-          value={eventName}
-          onChange={e=>setEventName(e.target.value)}
-        />
-
-        <button onClick={createEvent}>Start Event</button>
-        <button onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  // ---------------- ARCHIVE ----------------
-
-  if(screen==="archive"){
-    return (
-      <div style={{padding:20}}>
-        <h2>Event Archive</h2>
-
-        {events.map(e=>(
-          <div key={e.id} style={{marginBottom:10}}>
-            {e.name}
-
-            <button onClick={()=>loadEvent(e)}>Open</button>
-
-            {isAdmin && (
-              <button onClick={()=>deleteEvent(e.id)}>Delete</button>
-            )}
-          </div>
-        ))}
-
-        <button onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  // ---------------- LEADERBOARD ----------------
-
-  if(screen==="leaderboard"){
-    return (
-      <div style={{padding:20}}>
-        <h2>{eventName} Leaderboard</h2>
-
-        {combined.map((e,i)=>(
+        {list.map((e,i)=>(
           <div key={i}>
             #{i+1} {format(e)}
           </div>
@@ -283,48 +198,70 @@ export default function App(){
     );
   }
 
-  // ---------------- SCORE ----------------
+  // ---------------- SCORE SHEET ----------------
 
   return (
     <div style={scoreWrap}>
 
-      <input placeholder="Driver Name" value={driver} onChange={e=>setDriver(e.target.value)} />
-      <input placeholder="Car Number" value={carNumber} onChange={e=>setCarNumber(e.target.value)} />
-      <input placeholder="Car Rego / Number" value={carRego} onChange={e=>setCarRego(e.target.value)} />
+      <input style={input} placeholder="Driver Name" value={driver} onChange={e=>setDriver(e.target.value)} />
+      <input style={input} placeholder="Car Number" value={carNumber} onChange={e=>setCarNumber(e.target.value)} />
+      <input style={input} placeholder="Car Rego / Number" value={carRego} onChange={e=>setCarRego(e.target.value)} />
 
       {!entryValid && <div style={{color:"orange"}}>Enter Car Number or Rego</div>}
 
       {categories.map(cat=>(
-        <div key={cat}>
-          <strong>{cat}</strong><br/>
-          {Array.from({length:21},(_,i)=>(
-            <button key={i} onClick={()=>setScore(cat,i)}>{i}</button>
-          ))}
+        <div key={cat} style={rowBlock}>
+          <strong>{cat}</strong>
+          <div style={row}>
+            {Array.from({length:21},(_,i)=>(
+              <button key={i}
+                disabled={!entryValid}
+                onClick={()=>setScore(cat,i)}
+                style={scores[cat]===i?activeBtn:btn}>
+                {i}
+              </button>
+            ))}
+          </div>
         </div>
       ))}
 
       <div>
         <strong>Blown Tyres</strong><br/>
-        <button onClick={()=>setTyres(p=>({...p,one:!p.one}))}>1</button>
-        <button onClick={()=>setTyres(p=>({...p,two:!p.two}))}>2</button>
+        <button style={tyres.one?activeBtn:btn} onClick={()=>setTyres(p=>({...p,one:!p.one}))}>1</button>
+        <button style={tyres.two?activeBtn:btn} onClick={()=>setTyres(p=>({...p,two:!p.two}))}>2</button>
       </div>
 
       <div>
         <strong>Deductions</strong><br/>
         {deductionsList.map(d=>(
-          <button key={d} onClick={()=>toggleDeduction(d)}>{d}</button>
+          <button key={d}
+            onClick={()=>toggleDeduction(d)}
+            style={deductions[d]?activeBtn:btn}>
+            {d}
+          </button>
         ))}
       </div>
 
       <h2>Total: {total()}</h2>
 
-      <button onClick={submit}>Submit</button>
-      <button onClick={()=>setScreen("home")}>Home</button>
+      <button style={submitBtn} onClick={submit}>SUBMIT</button>
+      <button style={submitBtn} onClick={()=>setScreen("home")}>HOME</button>
+
     </div>
   );
 }
 
-// STYLES
+// STYLES (LOCKED)
 const homeWrap = {background:"#fff",height:"100vh",padding:20,textAlign:"center"};
-const menuBtn = {width:"90%",padding:18,margin:"8px auto",display:"block",fontSize:18};
-const scoreWrap = {background:"#111",color:"#fff",padding:20}; 
+const menuBtn = {width:"90%",padding:18,margin:"8px auto",fontSize:18};
+
+const scoreWrap = {background:"#111",color:"#fff",padding:20};
+const input = {width:"95%",padding:14,margin:5};
+
+const rowBlock = {marginBottom:20};
+const row = {display:"flex",flexWrap:"wrap"};
+
+const btn = {padding:14,margin:3,minWidth:50};
+const activeBtn = {...btn,background:"red",color:"#fff"};
+
+const submitBtn = {padding:18,margin:10};
