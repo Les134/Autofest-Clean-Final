@@ -327,4 +327,4 @@ export default function App(){
 // STYLES
 const homeWrap = {background:"#fff",height:"100vh",padding:20,textAlign:"center"};
 const menuBtn = {width:"90%",padding:18,margin:"8px auto",display:"block",fontSize:18};
-const scoreWrap = {background:"#111",color:"#fff",padding:20};
+const scoreWrap = {background:"#111",color:"#fff",padding:20}; 
