@@ -120,10 +120,14 @@ export default function App(){
       const key = (e.carNumber || e.carRego) + "_" + e.driver;
 
       if(!map[key]){
-        map[key]={...e,total:0};
+        map[key]={...e,total:0,deductions:[]};
       }
 
       map[key].total += e.total;
+
+      if(e.deductions){
+        map[key].deductions.push(...e.deductions);
+      }
     });
 
     return Object.values(map);
@@ -150,8 +154,13 @@ export default function App(){
 
   const classBoards = groupedByClass();
 
+  // ✅ UPDATED FORMAT WITH DEDUCTIONS
   function format(e){
-    return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total} (${e.gender})`;
+    const ded = e.deductions?.length
+      ? ` (${[...new Set(e.deductions)].join(", ")})`
+      : "";
+
+    return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total}${ded} (${e.gender})`;
   }
 
   function setAdmin(){
@@ -221,7 +230,7 @@ export default function App(){
         <button onClick={()=>{
           const newId = Date.now().toString();
           setEventId(newId);
-          setJudge(judges[0] || "Judge 1"); // default first judge
+          setJudge(judges[0] || "Judge 1");
           setScreen("score");
         }}>
           Lock Event
@@ -255,8 +264,6 @@ export default function App(){
 
   return (
     <div style={scoreWrap}>
-
-      {/* ✅ FIXED HEADER */}
       <h2>Judge: {judge}</h2>
 
       <input style={input} placeholder="Driver Name" value={driver} onChange={e=>setDriver(e.target.value)} />
@@ -265,11 +272,7 @@ export default function App(){
 
       <div>
         {classes.map(c=>(
-          <button key={c}
-            onClick={()=>setCarClass(c)}
-            style={carClass===c?activeBtn:bigBtn}>
-            {c}
-          </button>
+          <button key={c} onClick={()=>setCarClass(c)} style={carClass===c?activeBtn:bigBtn}>{c}</button>
         ))}
       </div>
 
@@ -282,11 +285,7 @@ export default function App(){
         <div key={cat}>
           <strong>{cat}</strong><br/>
           {Array.from({length:21},(_,i)=>(
-            <button key={i}
-              onClick={()=>setScore(cat,i)}
-              style={scores[cat]===i?activeBtn:btn}>
-              {i}
-            </button>
+            <button key={i} onClick={()=>setScore(cat,i)} style={scores[cat]===i?activeBtn:btn}>{i}</button>
           ))}
         </div>
       ))}
@@ -300,11 +299,7 @@ export default function App(){
       <div>
         <strong>Deductions</strong><br/>
         {deductionsList.map(d=>(
-          <button key={d}
-            onClick={()=>toggleDeduction(d)}
-            style={deductions[d]?activeBtn:btn}>
-            {d}
-          </button>
+          <button key={d} onClick={()=>toggleDeduction(d)} style={deductions[d]?activeBtn:btn}>{d}</button>
         ))}
       </div>
 
@@ -312,7 +307,6 @@ export default function App(){
 
       <button style={submitBtn} onClick={submit}>SUBMIT</button>
       <button style={submitBtn} onClick={()=>setScreen("home")}>HOME</button>
-
     </div>
   );
 }
@@ -328,3 +322,4 @@ const bigBtn = {padding:14,margin:6};
 const activeBtn = {...btn,background:"red",color:"#fff"};
 
 const submitBtn = {padding:18,margin:10};
+🎯 RESULT
