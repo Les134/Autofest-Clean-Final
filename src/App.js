@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, onSnapshot } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB5NhDJMBwhMpUUL3XIHUnISTuCeQkXKS8",
@@ -29,6 +34,7 @@ export default function App(){
   const [screen,setScreen] = useState("home");
 
   const [eventName,setEventName] = useState("");
+  const [eventId,setEventId] = useState("");
   const [judges,setJudges] = useState(["","","","","",""]);
   const [judge,setJudge] = useState("");
 
@@ -45,12 +51,16 @@ export default function App(){
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({one:false,two:false});
 
+  // 🔁 LOAD SCORES PER EVENT ONLY
   useEffect(()=>{
-    const unsub = onSnapshot(collection(db,"scores"), snap=>{
+    if(!eventId) return;
+
+    const unsub = onSnapshot(collection(db,"scores_"+eventId), snap=>{
       setData(snap.docs.map(d=>d.data()));
     });
+
     return ()=>unsub();
-  },[]);
+  },[eventId]);
 
   const entryValid =
     (carNumber.trim() !== "" || carRego.trim() !== "") &&
@@ -84,7 +94,7 @@ export default function App(){
 
     const activeDeductions = Object.keys(deductions).filter(d=>deductions[d]);
 
-    addDoc(collection(db,"scores"),{
+    addDoc(collection(db,"scores_"+eventId),{
       driver,
       carNumber,
       carRego,
@@ -92,8 +102,8 @@ export default function App(){
       gender,
       total: total(),
       deductions: activeDeductions,
-      judge,       // ✅ FIX
-      eventName    // ✅ FIX
+      judge,
+      eventId
     });
 
     setScores({});
@@ -176,7 +186,14 @@ export default function App(){
           />
         ))}
 
-        <button onClick={()=>setScreen("score")}>Lock Event</button>
+        <button onClick={()=>{
+          const newId = Date.now().toString();
+          setEventId(newId);   // 🔑 NEW EVENT = NEW DATASET
+          setScreen("score");
+        }}>
+          Lock Event
+        </button>
+
         <button onClick={()=>setScreen("home")}>Back</button>
       </div>
     );
@@ -259,21 +276,10 @@ export default function App(){
         </div>
       ))}
 
-      {/* FIXED TYRES */}
       <div>
         <strong>Blown Tyres</strong><br/>
-        <button
-          onClick={()=>setTyres(p=>({...p,one:!p.one}))}
-          style={tyres.one ? activeBtn : btn}
-        >
-          1
-        </button>
-        <button
-          onClick={()=>setTyres(p=>({...p,two:!p.two}))}
-          style={tyres.two ? activeBtn : btn}
-        >
-          2
-        </button>
+        <button onClick={()=>setTyres(p=>({...p,one:!p.one}))} style={tyres.one?activeBtn:btn}>1</button>
+        <button onClick={()=>setTyres(p=>({...p,two:!p.two}))} style={tyres.two?activeBtn:btn}>2</button>
       </div>
 
       <div>
@@ -296,7 +302,7 @@ export default function App(){
   );
 }
 
-// STYLES
+// STYLES (UNCHANGED)
 const homeWrap = {background:"#fff",height:"100vh",padding:20,textAlign:"center"};
 const menuBtn = {width:"90%",padding:18,margin:"8px auto",fontSize:18};
 
