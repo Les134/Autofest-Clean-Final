@@ -49,7 +49,6 @@ export default function App(){
   const [adminPass,setAdminPass] = useState(localStorage.getItem("adminPass") || "");
   const [adminLogged,setAdminLogged] = useState(false);
 
-  // LOAD EVENT DATA ONLY
   useEffect(()=>{
     if(!eventId) return;
 
@@ -104,7 +103,6 @@ export default function App(){
       eventId
     });
 
-    // RESET EVERYTHING (UNHIGHLIGHT)
     setScores({});
     setDeductions({});
     setTyres({one:false,two:false});
@@ -156,7 +154,6 @@ export default function App(){
     return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total} (${e.gender})`;
   }
 
-  // ADMIN
   function setAdmin(){
     const pass = prompt("Set Admin Password");
     if(pass){
@@ -174,8 +171,6 @@ export default function App(){
       alert("Wrong Password");
     }
   }
-
-  // ---------------- HOME ----------------
 
   if(screen==="home"){
     return (
@@ -198,8 +193,6 @@ export default function App(){
       </div>
     );
   }
-
-  // ---------------- EVENT LOGIN ----------------
 
   if(screen==="eventLogin"){
     return (
@@ -228,6 +221,7 @@ export default function App(){
         <button onClick={()=>{
           const newId = Date.now().toString();
           setEventId(newId);
+          setJudge(judges[0] || "Judge 1"); // default first judge
           setScreen("score");
         }}>
           Lock Event
@@ -237,8 +231,6 @@ export default function App(){
       </div>
     );
   }
-
-  // ---------------- LEADERBOARD ----------------
 
   if(screen==="leaderboard"){
     return (
@@ -261,12 +253,11 @@ export default function App(){
     );
   }
 
-  // ---------------- SCORE ----------------
-
   return (
     <div style={scoreWrap}>
 
-      <h2>{judge || "Judge"}</h2>
+      {/* ✅ FIXED HEADER */}
+      <h2>Judge: {judge}</h2>
 
       <input style={input} placeholder="Driver Name" value={driver} onChange={e=>setDriver(e.target.value)} />
       <input style={input} placeholder="Car Number" value={carNumber} onChange={e=>setCarNumber(e.target.value)} />
@@ -326,7 +317,6 @@ export default function App(){
   );
 }
 
-// STYLES (UNCHANGED)
 const homeWrap = {background:"#fff",height:"100vh",padding:20,textAlign:"center"};
 const menuBtn = {width:"90%",padding:18,margin:"8px auto",fontSize:18};
 
