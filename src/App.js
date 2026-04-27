@@ -63,7 +63,7 @@ export default function App(){
     });
   },[]);
 
-  // LOAD SCORES PER EVENT
+  // LOAD SCORES
   useEffect(()=>{
     if(!eventId) return;
 
@@ -157,7 +157,7 @@ export default function App(){
     return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total}${ded}`;
   }
 
-  // ---------------- HOME ----------------
+  // ---------------- HOME (RESTORED) ----------------
 
   if(screen==="home"){
     return (
@@ -168,10 +168,32 @@ export default function App(){
           Event and Judge Login
         </button>
 
-        <button style={menuBtn} onClick={()=>setScreen("archive")}>Event Archive</button>
-        <button style={menuBtn} onClick={()=>setScreen("leaderboard")}>Leaderboard</button>
-        <button style={menuBtn} onClick={()=>setScreen("top150")}>Top 150</button>
-        <button style={menuBtn} onClick={()=>setScreen("top30")}>Top 30</button>
+        <button style={menuBtn} onClick={()=>setScreen("judgeSelect")}>
+          Judge Login
+        </button>
+
+        <button style={menuBtn} onClick={()=>setScreen("score")}>
+          Resume Scoring
+        </button>
+
+        <button style={menuBtn} onClick={()=>setScreen("leaderboard")}>
+          Leaderboard
+        </button>
+
+        <button style={menuBtn} onClick={()=>setScreen("top150")}>
+          Top 150
+        </button>
+
+        <button style={menuBtn} onClick={()=>setScreen("top30")}>
+          Top 30
+        </button>
+
+        <button style={menuBtn} onClick={()=>setScreen("archive")}>
+          Event Archive
+        </button>
+
+        <button style={menuBtn}>Set Admin</button>
+        <button style={menuBtn}>Admin Login</button>
       </div>
     );
   }
@@ -223,7 +245,7 @@ export default function App(){
   if(screen==="judgeSelect"){
     return (
       <div style={homeWrap}>
-        <h2>Select Your Name</h2>
+        <h2>Select Judge</h2>
 
         {judges.map((j,i)=>(
           <button key={i} style={menuBtn}
@@ -254,7 +276,7 @@ export default function App(){
     );
   }
 
-  // ---------------- LEADERBOARD ----------------
+  // ---------------- LEADERBOARDS ----------------
 
   if(screen==="leaderboard" || screen==="top150" || screen==="top30"){
 
