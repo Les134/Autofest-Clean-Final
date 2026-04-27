@@ -149,15 +149,16 @@ export default function App(){
 
   const combined = combine();
 
+  // ✅ FIXED FORMAT (CLASS + GENDER INCLUDED)
   function format(e){
     const ded = e.deductions?.length
       ? ` (${[...new Set(e.deductions)].join(", ")})`
       : "";
 
-    return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total}${ded}`;
+    return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total}${ded} [${e.carClass} - ${e.gender}]`;
   }
 
-  // ---------------- HOME (RESTORED) ----------------
+  // ---------------- HOME ----------------
 
   if(screen==="home"){
     return (
