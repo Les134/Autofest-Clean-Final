@@ -3,11 +3,11 @@ import { initializeApp } from "firebase/app";
 import {
   getFirestore,
   collection,
-  addDoc,
   onSnapshot,
   doc,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  getDoc
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -43,6 +43,7 @@ export default function App(){
 
   const [eventName,setEventName] = useState("");
   const [eventId,setEventId] = useState("");
+  const [joinId,setJoinId] = useState("");
 
   const [judges,setJudges] = useState(["","","","","",""]);
   const [judge,setJudge] = useState("");
@@ -63,7 +64,7 @@ export default function App(){
   const [adminPass,setAdminPass] = useState(localStorage.getItem("adminPass") || "");
   const [adminLogged,setAdminLogged] = useState(false);
 
-  // ✅ LOAD SAVED EVENT
+  // LOAD SAVED EVENT
   useEffect(()=>{
     const savedEvent = localStorage.getItem("eventId");
     const savedJudges = localStorage.getItem("judges");
@@ -72,12 +73,21 @@ export default function App(){
     if(savedJudges) setJudges(JSON.parse(savedJudges));
   },[]);
 
-  // ✅ LIVE SYNC
+  // LIVE SYNC (FIXED)
   useEffect(()=>{
     if(!eventId) return;
-    const unsub = onSnapshot(collection(db,"scores_"+eventId), snap=>{
-      setData(snap.docs.map(d=>({id:d.id,...d.data()})));
-    });
+
+    const unsub = onSnapshot(
+      collection(db,"scores_"+eventId),
+      snap=>{
+        const results = snap.docs.map(d=>({id:d.id,...d.data()}));
+        setData(results);
+      },
+      err=>{
+        console.error("Firestore error:", err);
+      }
+    );
+
     return ()=>unsub();
   },[eventId]);
 
@@ -151,7 +161,7 @@ export default function App(){
     deleteDoc(doc(db,"scores_"+eventId,id));
   }
 
-  // ✅ FIXED COMBINE LOGIC
+  // FIXED COMBINE
   function combine(){
     const activeJudges = judges.filter(j => j && j.trim() !== "");
     const map = {};
@@ -256,10 +266,31 @@ export default function App(){
         <h3>OR Join Existing</h3>
 
         <input placeholder="Enter Event ID"
-          onChange={e=>setEventId(e.target.value)}
+          value={joinId}
+          onChange={e=>setJoinId(e.target.value)}
         />
 
-        <button onClick={()=>setScreen("judgeSelect")}>
+        <button onClick={async ()=>{
+          if(!joinId) return alert("Enter Event ID");
+
+          const docRef = doc(db,"events",joinId);
+          const snap = await getDoc(docRef);
+
+          if(!snap.exists()){
+            alert("Event not found");
+            return;
+          }
+
+          const eventData = snap.data();
+
+          setEventId(joinId);
+          setJudges(eventData.judges);
+
+          localStorage.setItem("eventId", joinId);
+          localStorage.setItem("judges", JSON.stringify(eventData.judges));
+
+          setScreen("judgeSelect");
+        }}>
           Join Event
         </button>
       </div>
@@ -281,6 +312,15 @@ export default function App(){
   }
 
   if(screen==="leaderboard" || screen==="top150" || screen==="top30" || screen==="classes"){
+
+    if(data.length === 0){
+      return (
+        <div style={{padding:20}}>
+          <h2>No Scores Yet</h2>
+          <button onClick={()=>setScreen("home")}>Home</button>
+        </div>
+      );
+    }
 
     let list = combined;
     if(screen==="top150") list = combined.slice(0,150);
@@ -319,8 +359,6 @@ export default function App(){
       </div>
     );
   }
-
-  // ================= SCORE SCREEN =================
 
   return (
     <div style={scoreWrap}>
@@ -371,8 +409,7 @@ export default function App(){
   );
 }
 
-// ================= STYLES =================
-
+// STYLES
 const homeWrap = {background:"#fff",height:"100vh",padding:20,textAlign:"center"};
 const menuBtn = {width:"90%",padding:18,margin:"8px auto",fontSize:18};
 
