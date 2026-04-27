@@ -151,7 +151,6 @@ export default function App(){
     deleteDoc(doc(db,"scores_"+eventId,id));
   }
 
-  // ✅ FIXED COMBINE (CLASS CAN NEVER DISAPPEAR)
   function combine(){
     const map = {};
 
@@ -209,7 +208,82 @@ export default function App(){
     );
   }
 
+  if(screen==="eventLogin"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Setup Event</h2>
+
+        <input placeholder="Event Name" value={eventName} onChange={e=>setEventName(e.target.value)} />
+
+        {judges.map((j,i)=>(
+          <input key={i} placeholder={`Judge ${i+1}`} value={judges[i]}
+            onChange={e=>{
+              const copy=[...judges];
+              copy[i]=e.target.value;
+              setJudges(copy);
+            }}
+          />
+        ))}
+
+        {/* ✅ FIXED LOGIN FLOW */}
+        <button onClick={async ()=>{
+          const id = Date.now().toString();
+
+          await setDoc(doc(db,"events",id),{
+            name:eventName,
+            judges
+          });
+
+          const fresh = await getDocs(collection(db,"events"));
+          const found = fresh.docs.find(d=>d.id === id);
+
+          if(found){
+            setJudges(found.data().judges || []);
+          }
+
+          setEventId(id);
+          setScreen("judgeSelect");
+        }}>
+          Lock Event
+        </button>
+      </div>
+    );
+  }
+
+  if(screen==="judgeSelect"){
+    return (
+      <div style={homeWrap}>
+        <h2>Select Judge</h2>
+
+        {judges.map((j,i)=>(
+          <button key={i} style={menuBtn}
+            onClick={()=>{setJudge(j || ("Judge "+(i+1))); setScreen("score");}}>
+            {j || ("Judge "+(i+1))}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  if(screen==="archive"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Event Archive</h2>
+
+        {events.map(e=>(
+          <button key={e.id}
+            onClick={()=>{setEventId(e.id); setScreen("leaderboard");}}>
+            {e.name}
+          </button>
+        ))}
+
+        <button onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
   if(screen==="leaderboard" || screen==="top150" || screen==="top30"){
+
     let list = combined;
     if(screen==="top150") list = combined.slice(0,150);
     if(screen==="top30") list = combined.slice(0,30);
