@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, onSnapshot } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  setDoc,
+  getDocs
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB5NhDJMBwhMpUUL3XIHUnISTuCeQkXKS8",
@@ -30,6 +38,8 @@ export default function App(){
 
   const [eventName,setEventName] = useState("");
   const [eventId,setEventId] = useState("");
+  const [events,setEvents] = useState([]);
+
   const [judges,setJudges] = useState(["","","","","",""]);
   const [judge,setJudge] = useState("");
 
@@ -46,9 +56,14 @@ export default function App(){
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({one:false,two:false});
 
-  const [adminPass,setAdminPass] = useState(localStorage.getItem("adminPass") || "");
-  const [adminLogged,setAdminLogged] = useState(false);
+  // LOAD EVENTS
+  useEffect(()=>{
+    getDocs(collection(db,"events")).then(snap=>{
+      setEvents(snap.docs.map(d=>({id:d.id,...d.data()})));
+    });
+  },[]);
 
+  // LOAD SCORES PER EVENT
   useEffect(()=>{
     if(!eventId) return;
 
@@ -99,8 +114,7 @@ export default function App(){
       gender,
       total: total(),
       deductions: activeDeductions,
-      judge,
-      eventId
+      judge
     });
 
     setScores({});
@@ -130,56 +144,20 @@ export default function App(){
       }
     });
 
-    return Object.values(map);
+    return Object.values(map).sort((a,b)=>b.total-a.total);
   }
 
   const combined = combine();
 
-  function groupedByClass(){
-    const grouped = {};
-    classes.forEach(c=>grouped[c]=[]);
-
-    combined.forEach(e=>{
-      if(grouped[e.carClass]){
-        grouped[e.carClass].push(e);
-      }
-    });
-
-    Object.keys(grouped).forEach(c=>{
-      grouped[c].sort((a,b)=>b.total-a.total);
-    });
-
-    return grouped;
-  }
-
-  const classBoards = groupedByClass();
-
-  // ✅ UPDATED FORMAT WITH DEDUCTIONS
   function format(e){
     const ded = e.deductions?.length
       ? ` (${[...new Set(e.deductions)].join(", ")})`
       : "";
 
-    return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total}${ded} (${e.gender})`;
+    return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total}${ded}`;
   }
 
-  function setAdmin(){
-    const pass = prompt("Set Admin Password");
-    if(pass){
-      localStorage.setItem("adminPass",pass);
-      setAdminPass(pass);
-    }
-  }
-
-  function loginAdmin(){
-    const pass = prompt("Enter Admin Password");
-    if(pass === adminPass){
-      setAdminLogged(true);
-      alert("Admin Logged In");
-    } else {
-      alert("Wrong Password");
-    }
-  }
+  // ---------------- HOME ----------------
 
   if(screen==="home"){
     return (
@@ -190,18 +168,15 @@ export default function App(){
           Event and Judge Login
         </button>
 
-        <button style={menuBtn} onClick={()=>setScreen("score")}>Resume Scoring</button>
-
+        <button style={menuBtn} onClick={()=>setScreen("archive")}>Event Archive</button>
         <button style={menuBtn} onClick={()=>setScreen("leaderboard")}>Leaderboard</button>
         <button style={menuBtn} onClick={()=>setScreen("top150")}>Top 150</button>
         <button style={menuBtn} onClick={()=>setScreen("top30")}>Top 30</button>
-
-        <button style={menuBtn}>Event Archive</button>
-        <button style={menuBtn} onClick={setAdmin}>Set Admin</button>
-        <button style={menuBtn} onClick={loginAdmin}>Admin Login</button>
       </div>
     );
   }
+
+  // ---------------- EVENT LOGIN ----------------
 
   if(screen==="eventLogin"){
     return (
@@ -215,8 +190,7 @@ export default function App(){
         />
 
         {judges.map((j,i)=>(
-          <input
-            key={i}
+          <input key={i}
             placeholder={`Judge ${i+1}`}
             value={judges[i]}
             onChange={e=>{
@@ -227,33 +201,74 @@ export default function App(){
           />
         ))}
 
-        <button onClick={()=>{
-          const newId = Date.now().toString();
-          setEventId(newId);
-          setJudge(judges[0] || "Judge 1");
-          setScreen("score");
+        <button onClick={async ()=>{
+          const id = Date.now().toString();
+          setEventId(id);
+
+          await setDoc(doc(db,"events",id),{
+            name:eventName,
+            judges
+          });
+
+          setScreen("judgeSelect");
         }}>
           Lock Event
         </button>
-
-        <button onClick={()=>setScreen("home")}>Back</button>
       </div>
     );
   }
 
-  if(screen==="leaderboard"){
+  // ---------------- JUDGE SELECT ----------------
+
+  if(screen==="judgeSelect"){
+    return (
+      <div style={homeWrap}>
+        <h2>Select Your Name</h2>
+
+        {judges.map((j,i)=>(
+          <button key={i} style={menuBtn}
+            onClick={()=>{setJudge(j || ("Judge "+(i+1))); setScreen("score");}}>
+            {j || ("Judge "+(i+1))}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // ---------------- ARCHIVE ----------------
+
+  if(screen==="archive"){
     return (
       <div style={{padding:20}}>
-        <h2>Class Leaderboards</h2>
+        <h2>Event Archive</h2>
 
-        {classes.map(c=>(
-          <div key={c}>
-            <h3>{c}</h3>
-            {classBoards[c].map((e,i)=>(
-              <div key={i}>
-                #{i+1} {format(e)}
-              </div>
-            ))}
+        {events.map(e=>(
+          <button key={e.id}
+            onClick={()=>{setEventId(e.id); setScreen("leaderboard");}}>
+            {e.name}
+          </button>
+        ))}
+
+        <button onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
+  // ---------------- LEADERBOARD ----------------
+
+  if(screen==="leaderboard" || screen==="top150" || screen==="top30"){
+
+    let list = combined;
+    if(screen==="top150") list = combined.slice(0,150);
+    if(screen==="top30") list = combined.slice(0,30);
+
+    return (
+      <div style={{padding:20}}>
+        <h2>{screen.toUpperCase()}</h2>
+
+        {list.map((e,i)=>(
+          <div key={i}>
+            #{i+1} {format(e)}
           </div>
         ))}
 
@@ -262,8 +277,11 @@ export default function App(){
     );
   }
 
+  // ---------------- SCORE ----------------
+
   return (
     <div style={scoreWrap}>
+
       <h2>Judge: {judge}</h2>
 
       <input style={input} placeholder="Driver Name" value={driver} onChange={e=>setDriver(e.target.value)} />
@@ -272,7 +290,11 @@ export default function App(){
 
       <div>
         {classes.map(c=>(
-          <button key={c} onClick={()=>setCarClass(c)} style={carClass===c?activeBtn:bigBtn}>{c}</button>
+          <button key={c}
+            onClick={()=>setCarClass(c)}
+            style={carClass===c?activeBtn:bigBtn}>
+            {c}
+          </button>
         ))}
       </div>
 
@@ -285,7 +307,11 @@ export default function App(){
         <div key={cat}>
           <strong>{cat}</strong><br/>
           {Array.from({length:21},(_,i)=>(
-            <button key={i} onClick={()=>setScore(cat,i)} style={scores[cat]===i?activeBtn:btn}>{i}</button>
+            <button key={i}
+              onClick={()=>setScore(cat,i)}
+              style={scores[cat]===i?activeBtn:btn}>
+              {i}
+            </button>
           ))}
         </div>
       ))}
@@ -299,7 +325,11 @@ export default function App(){
       <div>
         <strong>Deductions</strong><br/>
         {deductionsList.map(d=>(
-          <button key={d} onClick={()=>toggleDeduction(d)} style={deductions[d]?activeBtn:btn}>{d}</button>
+          <button key={d}
+            onClick={()=>toggleDeduction(d)}
+            style={deductions[d]?activeBtn:btn}>
+            {d}
+          </button>
         ))}
       </div>
 
@@ -307,10 +337,12 @@ export default function App(){
 
       <button style={submitBtn} onClick={submit}>SUBMIT</button>
       <button style={submitBtn} onClick={()=>setScreen("home")}>HOME</button>
+
     </div>
   );
 }
 
+// STYLES
 const homeWrap = {background:"#fff",height:"100vh",padding:20,textAlign:"center"};
 const menuBtn = {width:"90%",padding:18,margin:"8px auto",fontSize:18};
 
