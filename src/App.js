@@ -64,7 +64,7 @@ export default function App(){
   const [adminPass,setAdminPass] = useState(localStorage.getItem("adminPass") || "");
   const [adminLogged,setAdminLogged] = useState(false);
 
-  // LOAD SAVED EVENT
+  // LOAD EVENT
   useEffect(()=>{
     const savedEvent = localStorage.getItem("eventId");
     const savedJudges = localStorage.getItem("judges");
@@ -73,7 +73,7 @@ export default function App(){
     if(savedJudges) setJudges(JSON.parse(savedJudges));
   },[]);
 
-  // LIVE SYNC (FIXED)
+  // LIVE SYNC
   useEffect(()=>{
     if(!eventId) return;
 
@@ -82,14 +82,43 @@ export default function App(){
       snap=>{
         const results = snap.docs.map(d=>({id:d.id,...d.data()}));
         setData(results);
-      },
-      err=>{
-        console.error("Firestore error:", err);
       }
     );
 
     return ()=>unsub();
   },[eventId]);
+
+  // ✅ SAVE CURRENT SCORE (FIX)
+  useEffect(()=>{
+    const save = {
+      driver,
+      carNumber,
+      carRego,
+      carClass,
+      gender,
+      scores,
+      deductions,
+      tyres
+    };
+    localStorage.setItem("currentScore", JSON.stringify(save));
+  },[driver,carNumber,carRego,carClass,gender,scores,deductions,tyres]);
+
+  // ✅ RESTORE SCORE (FIX)
+  useEffect(()=>{
+    const saved = localStorage.getItem("currentScore");
+    if(!saved) return;
+
+    const s = JSON.parse(saved);
+
+    setDriver(s.driver || "");
+    setCarNumber(s.carNumber || "");
+    setCarRego(s.carRego || "");
+    setCarClass(s.carClass || "");
+    setGender(s.gender || "");
+    setScores(s.scores || {});
+    setDeductions(s.deductions || {});
+    setTyres(s.tyres || {one:false,two:false});
+  },[]);
 
   function adminSetup(){
     const pass = prompt("Set Admin Password");
@@ -146,6 +175,9 @@ export default function App(){
       judge
     });
 
+    // CLEAR SAVED STATE
+    localStorage.removeItem("currentScore");
+
     setScores({});
     setDeductions({});
     setTyres({one:false,two:false});
@@ -161,7 +193,6 @@ export default function App(){
     deleteDoc(doc(db,"scores_"+eventId,id));
   }
 
-  // FIXED COMBINE
   function combine(){
     const activeJudges = judges.filter(j => j && j.trim() !== "");
     const map = {};
@@ -206,7 +237,7 @@ export default function App(){
     return `${e.driver} / Car: ${e.carNumber || e.carRego} - ${e.total}${ded} [${e.carClass}] (${e.judgeCount}/${judges.length})`;
   }
 
-  // ================= SCREENS =================
+  // SCREENS
 
   if(screen==="home"){
     return (
