@@ -57,7 +57,7 @@ export default function App(){
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({one:false,two:false});
 
-  // 🔐 ADMIN
+  // ADMIN
   const [adminPass,setAdminPass] = useState(localStorage.getItem("adminPass") || "");
   const [adminLogged,setAdminLogged] = useState(false);
 
@@ -92,7 +92,7 @@ export default function App(){
     if(!eventId) return;
 
     const unsub = onSnapshot(collection(db,"scores_"+eventId), snap=>{
-      setData(snap.docs.map(d=>({...d.data(), id:d.id})));
+      setData(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
 
     return ()=>unsub();
@@ -189,8 +189,7 @@ export default function App(){
     return `${e.driver} / Car Number: ${e.carNumber || e.carRego} - Score: ${e.total}${ded} [${e.carClass} - ${e.gender}]`;
   }
 
-  // ---------------- HOME ----------------
-
+  // HOME
   if(screen==="home"){
     return (
       <div style={homeWrap}>
@@ -206,26 +205,96 @@ export default function App(){
 
         <button style={menuBtn} onClick={()=>setScreen("archive")}>Event Archive</button>
 
-        {/* 🔐 ADMIN PANEL */}
         <button style={menuBtn} onClick={adminSetup}>Set Admin</button>
         <button style={menuBtn} onClick={adminLogin}>Admin Login</button>
       </div>
     );
   }
 
-  // ---------------- LEADERBOARD ----------------
-
-  if(screen==="leaderboard"){
+  // EVENT LOGIN
+  if(screen==="eventLogin"){
     return (
       <div style={{padding:20}}>
-        <h2>Leaderboard</h2>
+        <h2>Setup Event</h2>
 
-        {combined.map((e,i)=>(
+        <input placeholder="Event Name" value={eventName} onChange={e=>setEventName(e.target.value)} />
+
+        {judges.map((j,i)=>(
+          <input key={i} placeholder={`Judge ${i+1}`} value={judges[i]}
+            onChange={e=>{
+              const copy=[...judges];
+              copy[i]=e.target.value;
+              setJudges(copy);
+            }}
+          />
+        ))}
+
+        <button onClick={async ()=>{
+          const id = Date.now().toString();
+          setEventId(id);
+
+          await setDoc(doc(db,"events",id),{
+            name:eventName,
+            judges
+          });
+
+          setScreen("judgeSelect");
+        }}>
+          Lock Event
+        </button>
+      </div>
+    );
+  }
+
+  // JUDGE SELECT
+  if(screen==="judgeSelect"){
+    return (
+      <div style={homeWrap}>
+        <h2>Select Judge</h2>
+
+        {judges.map((j,i)=>(
+          <button key={i} style={menuBtn}
+            onClick={()=>{setJudge(j || ("Judge "+(i+1))); setScreen("score");}}>
+            {j || ("Judge "+(i+1))}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // ARCHIVE
+  if(screen==="archive"){
+    return (
+      <div style={{padding:20}}>
+        <h2>Event Archive</h2>
+
+        {events.map(e=>(
+          <button key={e.id}
+            onClick={()=>{setEventId(e.id); setScreen("leaderboard");}}>
+            {e.name}
+          </button>
+        ))}
+
+        <button onClick={()=>setScreen("home")}>Home</button>
+      </div>
+    );
+  }
+
+  // LEADERBOARDS
+  if(screen==="leaderboard" || screen==="top150" || screen==="top30"){
+
+    let list = combined;
+    if(screen==="top150") list = combined.slice(0,150);
+    if(screen==="top30") list = combined.slice(0,30);
+
+    return (
+      <div style={{padding:20}}>
+        <h2>{screen.toUpperCase()}</h2>
+
+        {list.map((e,i)=>(
           <div key={i}>
             #{i+1} {format(e)}
-            {adminLogged && (
-              <button onClick={()=>deleteScore(e.id)}>Delete</button>
-            )}
+            {adminLogged && <button onClick={()=>deleteScore(e.id)}>Delete</button>}
           </div>
         ))}
 
@@ -234,9 +303,65 @@ export default function App(){
     );
   }
 
-  return <div style={{padding:20}}>UNCHANGED SCREENS CONTINUE...</div>;
+  // SCORE
+  return (
+    <div style={scoreWrap}>
+      <h2>Judge: {judge}</h2>
+
+      <input style={input} placeholder="Driver Name" value={driver} onChange={e=>setDriver(e.target.value)} />
+      <input style={input} placeholder="Car Number" value={carNumber} onChange={e=>setCarNumber(e.target.value)} />
+      <input style={input} placeholder="Car Rego / Number" value={carRego} onChange={e=>setCarRego(e.target.value)} />
+
+      <div>
+        {classes.map(c=>(
+          <button key={c} onClick={()=>setCarClass(c)} style={carClass===c?activeBtn:bigBtn}>{c}</button>
+        ))}
+      </div>
+
+      <div>
+        <button onClick={()=>setGender("Male")} style={gender==="Male"?activeBtn:bigBtn}>Male</button>
+        <button onClick={()=>setGender("Female")} style={gender==="Female"?activeBtn:bigBtn}>Female</button>
+      </div>
+
+      {categories.map(cat=>(
+        <div key={cat}>
+          <strong>{cat}</strong><br/>
+          {Array.from({length:21},(_,i)=>(
+            <button key={i} onClick={()=>setScore(cat,i)} style={scores[cat]===i?activeBtn:btn}>{i}</button>
+          ))}
+        </div>
+      ))}
+
+      <div>
+        <strong>Blown Tyres</strong><br/>
+        <button onClick={()=>setTyres(p=>({...p,one:!p.one}))} style={tyres.one?activeBtn:btn}>1</button>
+        <button onClick={()=>setTyres(p=>({...p,two:!p.two}))} style={tyres.two?activeBtn:btn}>2</button>
+      </div>
+
+      <div>
+        <strong>Deductions</strong><br/>
+        {deductionsList.map(d=>(
+          <button key={d} onClick={()=>toggleDeduction(d)} style={deductions[d]?activeBtn:btn}>{d}</button>
+        ))}
+      </div>
+
+      <h2>Total: {total()}</h2>
+
+      <button style={submitBtn} onClick={submit}>SUBMIT</button>
+      <button style={submitBtn} onClick={()=>setScreen("home")}>HOME</button>
+    </div>
+  );
 }
 
 // STYLES
 const homeWrap = {background:"#fff",height:"100vh",padding:20,textAlign:"center"};
 const menuBtn = {width:"90%",padding:18,margin:"8px auto",fontSize:18};
+
+const scoreWrap = {background:"#111",color:"#fff",padding:20};
+const input = {width:"95%",padding:14,margin:5};
+
+const btn = {padding:12,margin:3};
+const bigBtn = {padding:14,margin:6};
+const activeBtn = {...btn,background:"red",color:"#fff"};
+
+const submitBtn = {padding:18,margin:10};
