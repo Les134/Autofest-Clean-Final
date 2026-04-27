@@ -245,7 +245,7 @@ export default function App(){
     );
   }
 
-  // LEADERBOARDS
+  // LEADERBOARDS (ONLY CHANGE: RETURN BUTTON)
   if(screen==="leaderboard" || screen==="top150" || screen==="top30" || screen==="classes"){
 
     let list = combined;
@@ -272,6 +272,7 @@ export default function App(){
             </div>
           ))}
 
+          <button onClick={()=>setScreen("score")}>Return to Scoresheet</button>
           <button onClick={()=>setScreen("home")}>Home</button>
         </div>
       );
@@ -288,6 +289,7 @@ export default function App(){
           </div>
         ))}
 
+        <button onClick={()=>setScreen("score")}>Return to Scoresheet</button>
         <button onClick={()=>setScreen("home")}>Home</button>
       </div>
     );
