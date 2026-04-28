@@ -79,7 +79,7 @@ export default function App(){
     return ()=>unsub();
   },[eventId]);
 
-  // SAVE SCORE STATE
+  // SAVE SCORE
   useEffect(()=>{
     if(screen !== "score") return;
     localStorage.setItem("currentScore", JSON.stringify({
@@ -113,10 +113,7 @@ export default function App(){
   }
 
   async function submit(){
-    if(!driver) return alert("Enter driver");
-
     const id = `${carNumber || carRego}_${driver}_${judge}`;
-
     await setDoc(doc(db,"scores_"+eventId,id),{
       driver,carNumber,carRego,carClass,gender,
       total: total(),
@@ -145,26 +142,11 @@ export default function App(){
 
   const combined = combine();
 
-  // HOME
+  // HOME (RESTORED STYLE)
   if(screen==="home"){
     return (
       <div style={homeWrap}>
         <h1>🔥 AUTOFEST LIVE SYNC 🔥</h1>
-        <button style={menuBtn} onClick={()=>setScreen("eventLogin")}>Event and Judge Login</button>
-        <button style={menuBtn} onClick={()=>setScreen("judgeSelect")}>Judge Login</button>
-        <button style={menuBtn} onClick={()=>setScreen("leaderboard")}>Leaderboard</button>
-        <button style={menuBtn} onClick={()=>setScreen("top150")}>Top 150</button>
-        <button style={menuBtn} onClick={()=>setScreen("top30")}>Top 30</button>
-        <button style={menuBtn} onClick={()=>setScreen("classes")}>Classes</button>
-      </div>
-    );
-  }
-
-  // EVENT LOGIN FIXED
-  if(screen==="eventLogin"){
-    return (
-      <div style={{padding:20}}>
-        <h2>Setup Event</h2>
 
         <input placeholder="Event Name" value={eventName} onChange={e=>setEventName(e.target.value)} />
 
@@ -178,10 +160,9 @@ export default function App(){
           />
         ))}
 
-        <button onClick={async ()=>{
+        <button style={menuBtn} onClick={async ()=>{
           const clean = judges.filter(j=>j.trim()!=="");
           const id = Date.now().toString();
-
           await setDoc(doc(db,"events",id),{name:eventName,judges:clean});
 
           localStorage.setItem("eventId", id);
@@ -189,15 +170,14 @@ export default function App(){
 
           setEventId(id);
           setJudges(clean);
-          setScreen("judgeSelect");
+          setScreen("score");
         }}>
-          Lock Event
+          Start Event
         </button>
 
-        <h3>Join Event</h3>
-        <input value={joinId} onChange={e=>setJoinId(e.target.value)} />
+        <input placeholder="Join Event ID" value={joinId} onChange={e=>setJoinId(e.target.value)} />
 
-        <button onClick={async ()=>{
+        <button style={menuBtn} onClick={async ()=>{
           const snap = await getDoc(doc(db,"events",joinId));
           if(!snap.exists()) return alert("Event not found");
 
@@ -209,74 +189,68 @@ export default function App(){
           localStorage.setItem("eventId", joinId);
           localStorage.setItem("judges", JSON.stringify(d.judges));
 
-          setScreen("judgeSelect");
+          setScreen("score");
         }}>
           Join Event
         </button>
+
+        <button style={menuBtn} onClick={()=>setScreen("leaderboard")}>Leaderboard</button>
+        <button style={menuBtn} onClick={()=>setScreen("top150")}>Top 150</button>
+        <button style={menuBtn} onClick={()=>setScreen("top30")}>Top 30</button>
+        <button style={menuBtn} onClick={()=>setScreen("classes")}>Classes</button>
       </div>
     );
   }
 
-  // JUDGE SELECT
-  if(screen==="judgeSelect"){
+  // SCORE
+  if(screen==="score"){
     return (
-      <div style={homeWrap}>
-        {judges.map((j,i)=>(
-          <button key={i} style={menuBtn}
-            onClick={()=>{ setJudge(j); setScreen("score"); }}>
-            {j}
-          </button>
+      <div style={scoreWrap}>
+        <h2>Judge: {judge}</h2>
+
+        <input style={input} placeholder="Driver" value={driver} onChange={e=>setDriver(e.target.value)} />
+
+        {categories.map(cat=>(
+          <div key={cat}>
+            <strong>{cat}</strong><br/>
+            {Array.from({length:21},(_,i)=>(
+              <button key={i} onClick={()=>setScores(p=>({...p,[cat]:i}))}>{i}</button>
+            ))}
+          </div>
         ))}
+
+        <h2>Total: {total()}</h2>
+
+        <button style={submitBtn} onClick={submit}>SUBMIT</button>
+        <button style={submitBtn} onClick={()=>setScreen("leaderboard")}>Leaderboard</button>
       </div>
     );
   }
 
   // LEADERBOARDS
-  if(screen==="leaderboard" || screen==="top150" || screen==="top30" || screen==="classes"){
-    let list = combined;
-    if(screen==="top150") list = combined.slice(0,150);
-    if(screen==="top30") list = combined.slice(0,30);
+  let list = combined;
+  if(screen==="top150") list = combined.slice(0,150);
+  if(screen==="top30") list = combined.slice(0,30);
 
-    return (
-      <div style={{padding:20}}>
-        <h2>{screen.toUpperCase()}</h2>
-
-        {list.map((e,i)=>(
-          <div key={i}>#{i+1} {e.driver} - {e.total}</div>
-        ))}
-
-        <button onClick={()=>setScreen("score")}>Return to Scoresheet</button>
-        <button onClick={()=>setScreen("home")}>Home</button>
-      </div>
-    );
-  }
-
-  // SCORE SCREEN
   return (
-    <div style={scoreWrap}>
-      <h2>Judge: {judge}</h2>
+    <div style={{padding:20}}>
+      <h2>{screen.toUpperCase()}</h2>
 
-      <input style={input} placeholder="Driver" value={driver} onChange={e=>setDriver(e.target.value)} />
-
-      {categories.map(cat=>(
-        <div key={cat}>
-          <strong>{cat}</strong><br/>
-          {Array.from({length:21},(_,i)=>(
-            <button key={i} onClick={()=>setScores(p=>({...p,[cat]:i}))}>{i}</button>
-          ))}
-        </div>
+      {list.map((e,i)=>(
+        <div key={i}>#{i+1} {e.driver} - {e.total}</div>
       ))}
 
-      <h2>Total: {total()}</h2>
-
-      <button style={submitBtn} onClick={submit}>SUBMIT</button>
-      <button style={submitBtn} onClick={()=>setScreen("leaderboard")}>Leaderboard</button>
+      <button onClick={()=>setScreen("score")}>Return to Scoresheet</button>
+      <button onClick={()=>setScreen("home")}>Home</button>
     </div>
   );
 }
 
+// STYLES
 const homeWrap = {padding:20,textAlign:"center"};
 const menuBtn = {padding:18,margin:8};
+
 const scoreWrap = {background:"#111",color:"#fff",padding:20};
 const input = {width:"95%",padding:14,margin:5};
+
 const submitBtn = {padding:18,margin:10};
