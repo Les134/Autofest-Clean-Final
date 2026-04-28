@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import ScoreSheet from "./ScoreSheet";
 import Leaderboard from "./Leaderboard";
 
-export default function App() {
+export default function ScoreSheet App() {
   const [eventName, setEventName] = useState("");
   const [judgeName, setJudgeName] = useState("");
   const [started, setStarted] = useState(false);
