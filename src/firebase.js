@@ -2,12 +2,12 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
+  apiKey: "PASTE_REAL_KEY_HERE",
   authDomain: "autofestscoreapp.firebaseapp.com",
   projectId: "autofestscoreapp",
   storageBucket: "autofestscoreapp.appspot.com",
-  messagingSenderId: "XXXX",
-  appId: "XXXX"
+  messagingSenderId: "PASTE_REAL_ID",
+  appId: "PASTE_REAL_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
