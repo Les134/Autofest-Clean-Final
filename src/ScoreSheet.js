@@ -1,4 +1,5 @@
-  import React, { useState, useEffect } from "react";
+import { db } from "./firebase";
+import React, { useState, useEffect } from "react";
 
 export default function ScoreSheet({ eventName, judgeName }) {
   const [carName, setCarName] = useState("");
