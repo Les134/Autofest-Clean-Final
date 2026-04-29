@@ -1,5 +1,12 @@
-import { db } from "./firebase";
 import React, { useState, useEffect } from "react";
+import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs
+} from "firebase/firestore";
 
 export default function ScoreSheet({ eventName, judgeName }) {
   const [carName, setCarName] = useState("");
@@ -20,6 +27,40 @@ export default function ScoreSheet({ eventName, judgeName }) {
       Number(scores.crowd)
     );
   }, [scores]);
+
+  const handleSubmit = async () => {
+    if (!carName || !carClass) return;
+
+    // 🔒 prevent duplicate scoring per judge/car/event
+    const q = query(
+      collection(db, "scores"),
+      where("eventName", "==", eventName),
+      where("carName", "==", carName),
+      where("judgeName", "==", judgeName)
+    );
+
+    const existing = await getDocs(q);
+
+    if (!existing.empty) {
+      alert("You already scored this car.");
+      return;
+    }
+
+    await addDoc(collection(db, "scores"), {
+      eventName,
+      judgeName,
+      carName,
+      carClass,
+      scores,
+      total,
+      createdAt: new Date()
+    });
+
+    // reset form
+    setCarName("");
+    setCarClass("");
+    setScores({ burnout: 0, showmanship: 0, crowd: 0 });
+  };
 
   return (
     <div style={{ marginTop: 20 }}>
@@ -71,6 +112,8 @@ export default function ScoreSheet({ eventName, judgeName }) {
       </div>
 
       <h4>Total: {total}</h4>
+
+      <button onClick={handleSubmit}>Submit Score</button>
     </div>
   );
 }
