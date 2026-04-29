@@ -1,4 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc
+} from "firebase/firestore";
 
 const categories = [
   "Instant Smoke",
@@ -25,7 +33,7 @@ export default function App(){
   const [judges,setJudges] = useState(["","","","","",""]);
   const [activeJudge,setActiveJudge] = useState("");
 
-  const [events,setEvents] = useState({}); // 🔥 all events stored here
+  const [events,setEvents] = useState([]);
 
   const [car,setCar] = useState("");
   const [name,setName] = useState("");
@@ -41,25 +49,35 @@ export default function App(){
   const [saving,setSaving] = useState(false);
   const [isAdmin,setIsAdmin] = useState(false);
 
-  const startEvent = ()=>{
+  // LOAD EVENTS
+  useEffect(()=>{
+    loadEvents();
+  },[]);
+
+  const loadEvents = async ()=>{
+    const snap = await getDocs(collection(db,"events"));
+    const list = snap.docs.map(d=>({id:d.id,...d.data()}));
+    setEvents(list);
+  };
+
+  // CREATE EVENT
+  const startEvent = async ()=>{
     const valid = judges.filter(j=>j.trim() !== "");
     if(!eventName) return alert("Enter event name");
     if(valid.length === 0) return alert("Add at least 1 judge");
 
-    setJudges(valid);
+    await addDoc(collection(db,"events"),{
+      name:eventName,
+      judges:valid,
+      createdAt:new Date()
+    });
 
-    setEvents(prev => ({
-      ...prev,
-      [eventName]: {
-        entries: [],
-        locked: false
-      }
-    }));
-
+    loadEvents();
     setScreen("judge");
   };
 
-  const submit = ()=>{
+  // SUBMIT SCORE
+  const submit = async ()=>{
     if(saving) return;
 
     if(!car && !name && !rego){
@@ -74,22 +92,17 @@ export default function App(){
 
     const finalScore = base + tyreScore - deductionTotal;
 
-    const entry = {
+    await addDoc(collection(db,"scores"),{
+      eventName,
       car,
       name,
       rego,
       gender,
       carClass,
-      finalScore
-    };
-
-    setEvents(prev => ({
-      ...prev,
-      [eventName]: {
-        ...prev[eventName],
-        entries: [...(prev[eventName]?.entries || []), entry]
-      }
-    }));
+      judge:activeJudge,
+      finalScore,
+      createdAt:new Date()
+    });
 
     setScores({});
     setDeductions({});
@@ -103,28 +116,17 @@ export default function App(){
     setSaving(false);
   };
 
-  const currentEntries = events[eventName]?.entries || [];
+  const deleteEvent = async (id)=>{
+    if(!isAdmin) return alert("Admin only");
 
-  const sorted = [...currentEntries].sort((a,b)=>b.finalScore-a.finalScore);
-  const top150 = sorted.slice(0,150);
-  const top30 = sorted.slice(0,30);
-
-  const grouped = {};
-  sorted.forEach(e=>{
-    if(!grouped[e.carClass]) grouped[e.carClass]=[];
-    grouped[e.carClass].push(e);
-  });
+    await deleteDoc(doc(db,"events",id));
+    loadEvents();
+  };
 
   const big={padding:18,margin:10,width:"100%",fontSize:18};
   const btn={padding:12,margin:5,border:"1px solid #ccc"};
   const active={...btn,background:"red",color:"#fff"};
   const classActive={...btn,background:"green",color:"#fff"};
-
-  const renderList = (list)=>list.map((e,i)=>(
-    <div key={i}>
-      #{i+1} | {e.car || e.name || e.rego} | {e.finalScore}
-    </div>
-  ));
 
   // HOME
   if(screen==="home"){
@@ -135,11 +137,6 @@ export default function App(){
         <button style={big} onClick={()=>setScreen("setup")}>New Event</button>
         <button style={big} onClick={()=>setScreen("judge")}>Judge Login</button>
         <button style={big} onClick={()=>setScreen("score")}>Resume Scoring</button>
-
-        <button style={big} onClick={()=>setScreen("leader")}>Leaderboard</button>
-        <button style={big} onClick={()=>setScreen("top150")}>Top 150</button>
-        <button style={big} onClick={()=>setScreen("top30")}>Top 30 Finals</button>
-        <button style={big} onClick={()=>setScreen("class")}>Class Leaders</button>
 
         <button style={big} onClick={()=>setScreen("archive")}>Event Archive</button>
         <button style={big} onClick={()=>setScreen("admin")}>Admin Login</button>
@@ -247,65 +244,24 @@ export default function App(){
           </div>
         ))}
 
-        <div>
-          <button style={tyres.left?active:btn} onClick={()=>setTyres({...tyres,left:!tyres.left})}>Left Tyre</button>
-          <button style={tyres.right?active:btn} onClick={()=>setTyres({...tyres,right:!tyres.right})}>Right Tyre</button>
-        </div>
-
-        <div>
-          {deductionsList.map(d=>(
-            <button key={d}
-              style={deductions[d]?active:btn}
-              onClick={()=>setDeductions({...deductions,[d]:!deductions[d]})}>
-              {d}
-            </button>
-          ))}
-        </div>
-
         <button style={big} onClick={submit}>
           {saving ? "Saving..." : "Submit & Next"}
         </button>
-
-        <button style={big} onClick={()=>setScreen("home")}>Home</button>
       </div>
     );
   }
 
-  // LEADER
-  if(screen==="leader") return <div style={{padding:20}}><h2>Leaderboard</h2>{renderList(sorted)}</div>;
-  if(screen==="top150") return <div style={{padding:20}}><h2>Top 150</h2>{renderList(top150)}</div>;
-  if(screen==="top30") return <div style={{padding:20}}><h2>Top 30 Finals</h2>{renderList(top30)}</div>;
-
-  if(screen==="class"){
-    return(
-      <div style={{padding:20}}>
-        <h2>Class Leaders</h2>
-        {Object.keys(grouped).map(k=>(
-          <div key={k}>
-            <h3>{k}</h3>
-            {renderList(grouped[k])}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
+  // ARCHIVE
   if(screen==="archive"){
     return(
       <div style={{padding:20}}>
         <h2>Event Archive</h2>
 
-        {Object.keys(events).map(ev=>(
-          <div key={ev}>
-            {ev}
+        {events.map(ev=>(
+          <div key={ev.id}>
+            {ev.name}
             {isAdmin && (
-              <button onClick={()=>{
-                const copy={...events};
-                delete copy[ev];
-                setEvents(copy);
-              }}>
-                Delete
-              </button>
+              <button onClick={()=>deleteEvent(ev.id)}>Delete</button>
             )}
           </div>
         ))}
