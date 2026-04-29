@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import ScoreSheet from "./ScoreSheetNEW";
+import ScoreSheet from "./ScoreSheet";
 import Leaderboard from "./Leaderboard";
 
 export default function App() {
