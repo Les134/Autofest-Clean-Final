@@ -66,20 +66,37 @@ export default function App(){
     setEntries(snap.docs.map(d=>d.data()));
   };
 
-  // CREATE EVENT
+  // START EVENT (FIXED)
   const startEvent = async ()=>{
-    const valid = judges.filter(j=>j.trim() !== "");
-    if(!eventName) return alert("Enter event name");
-    if(valid.length === 0) return alert("Add at least 1 judge");
+    const valid = judges.filter(j => j.trim() !== "");
 
-    await addDoc(collection(db,"events"),{
-      name:eventName,
-      judges:valid,
-      createdAt:new Date()
-    });
+    if(!eventName){
+      alert("Enter event name");
+      return;
+    }
 
-    loadEvents();
-    setScreen("judge");
+    if(valid.length === 0){
+      alert("Add at least 1 judge");
+      return;
+    }
+
+    try {
+      setJudges(valid);
+
+      await addDoc(collection(db,"events"),{
+        name: eventName,
+        judges: valid,
+        createdAt: new Date()
+      });
+
+      await loadEvents();
+
+      setScreen("judge");
+
+    } catch(err){
+      console.error(err);
+      alert("Error starting event");
+    }
   };
 
   // SUBMIT SCORE
@@ -113,7 +130,7 @@ export default function App(){
       createdAt:new Date()
     });
 
-    loadScores();
+    await loadScores();
 
     // RESET
     setScores({});
@@ -135,7 +152,7 @@ export default function App(){
     loadEvents();
   };
 
-  // PROCESS LEADERBOARD
+  // LEADERBOARD PROCESSING
   const current = entries.filter(e=>e.eventName===eventName);
 
   const combined = {};
@@ -184,8 +201,7 @@ export default function App(){
     </div>
   ));
 
-  // SCREENS
-
+  // HOME
   if(screen==="home"){
     return(
       <div style={{padding:20}}>
@@ -226,10 +242,16 @@ export default function App(){
   if(screen==="setup"){
     return(
       <div style={{padding:20}}>
-        <input placeholder="Event Name" onChange={(e)=>setEventName(e.target.value)} />
+        <input
+          placeholder="Event Name"
+          value={eventName}
+          onChange={(e)=>setEventName(e.target.value)}
+        />
 
         {judges.map((j,i)=>(
-          <input key={i} placeholder={`Judge ${i+1}`}
+          <input key={i}
+            placeholder={`Judge ${i+1}`}
+            value={judges[i]}
             onChange={(e)=>{
               const copy=[...judges];
               copy[i]=e.target.value;
@@ -246,6 +268,8 @@ export default function App(){
   if(screen==="judge"){
     return(
       <div style={{padding:20}}>
+        <h2>Select Judge</h2>
+
         {judges.map((j,i)=>(
           <button key={i} style={big}
             onClick={()=>{setActiveJudge(j);setScreen("score")}}>
