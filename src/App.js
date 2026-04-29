@@ -27,22 +27,24 @@ const deductionsList = ["Reversing","Stopping","Barrier","Fire"];
 
 export default function App(){
 
+  // NAV
   const [screen,setScreen] = useState("home");
 
+  // EVENT / JUDGES
   const [eventName,setEventName] = useState("");
   const [judges,setJudges] = useState(["","","","","",""]);
   const [activeJudge,setActiveJudge] = useState("");
 
+  // DATA
   const [events,setEvents] = useState([]);
   const [entries,setEntries] = useState([]);
 
+  // SCORE INPUTS
   const [car,setCar] = useState("");
   const [name,setName] = useState("");
   const [rego,setRego] = useState("");
-
   const [gender,setGender] = useState("");
   const [carClass,setCarClass] = useState("");
-
   const [scores,setScores] = useState({});
   const [deductions,setDeductions] = useState({});
   const [tyres,setTyres] = useState({left:false,right:false});
@@ -50,50 +52,40 @@ export default function App(){
   const [saving,setSaving] = useState(false);
   const [isAdmin,setIsAdmin] = useState(false);
 
-  // 🔥 REALTIME SYNC
+  // 🔥 REALTIME DATA
   useEffect(() => {
 
-    const unsubEvents = onSnapshot(collection(db, "events"), (snap) => {
-      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const unsubEvents = onSnapshot(collection(db,"events"), snap=>{
+      setEvents(snap.docs.map(d=>({id:d.id,...d.data()})));
     });
 
-    const unsubScores = onSnapshot(collection(db, "scores"), (snap) => {
-      setEntries(snap.docs.map(d => d.data()));
+    const unsubScores = onSnapshot(collection(db,"scores"), snap=>{
+      setEntries(snap.docs.map(d=>d.data()));
     });
 
-    return () => {
-      unsubEvents();
-      unsubScores();
-    };
+    return ()=>{unsubEvents();unsubScores();};
 
-  }, []);
+  },[]);
 
   // START EVENT (FIXED)
   const startEvent = async ()=>{
-    const valid = judges.filter(j => j.trim() !== "");
+    const valid = judges.filter(j=>j.trim() !== "");
 
-    if(!eventName){
-      alert("Enter event name");
-      return;
-    }
+    if(!eventName) return alert("Enter event name");
+    if(valid.length === 0) return alert("Add at least 1 judge");
 
-    if(valid.length === 0){
-      alert("Add at least 1 judge");
-      return;
-    }
-
-    try {
+    try{
       setJudges(valid);
 
       await addDoc(collection(db,"events"),{
-        name: eventName,
-        judges: valid,
-        createdAt: new Date()
+        name:eventName,
+        judges:valid,
+        createdAt:new Date()
       });
 
       setScreen("judge");
 
-    } catch(err){
+    }catch(err){
       console.error(err);
       alert("Error starting event");
     }
@@ -102,18 +94,14 @@ export default function App(){
   // SUBMIT SCORE
   const submit = async ()=>{
     if(saving) return;
-
-    if(!car && !name && !rego){
-      return alert("Enter Car #, Name or Rego");
-    }
+    if(!car && !name && !rego) return alert("Enter Car #, Name or Rego");
 
     setSaving(true);
 
     const base = Object.values(scores).reduce((a,b)=>a+b,0);
     const tyreScore = (tyres.left?5:0)+(tyres.right?5:0);
-
-    const activeDeductions = Object.keys(deductions).filter(d => deductions[d]);
-    const deductionTotal = activeDeductions.length * 10;
+    const activeDeductions = Object.keys(deductions).filter(d=>deductions[d]);
+    const deductionTotal = activeDeductions.length*10;
 
     const total = base + tyreScore - deductionTotal;
 
@@ -130,7 +118,7 @@ export default function App(){
       createdAt:new Date()
     });
 
-    // RESET
+    // RESET FORM
     setScores({});
     setDeductions({});
     setTyres({left:false,right:false});
@@ -149,7 +137,7 @@ export default function App(){
     await deleteDoc(doc(db,"events",id));
   };
 
-  // 🔥 LEADERBOARD PROCESSING
+  // 🔥 LEADERBOARD BUILD
   const current = entries.filter(e=>e.eventName===eventName);
 
   const combined = {};
@@ -171,7 +159,7 @@ export default function App(){
   });
 
   const list = Object.values(combined)
-    .map(e=>({...e, deductions:[...e.deductions]}))
+    .map(e=>({...e,deductions:[...e.deductions]}))
     .sort((a,b)=>b.total-a.total);
 
   const top150 = list.slice(0,150);
@@ -186,11 +174,11 @@ export default function App(){
   const female = list.filter(e=>e.gender==="Female");
 
   const big={padding:18,margin:10,width:"100%",fontSize:18};
-  const btn={padding:10,margin:5,border:"1px solid #ccc"};
+  const btn={padding:10,margin:5};
   const active={...btn,background:"red",color:"#fff"};
   const classActive={...btn,background:"green",color:"#fff"};
 
-  const renderList = (list)=>list.map((e,i)=>(
+  const renderList = (arr)=>arr.map((e,i)=>(
     <div key={i}>
       #{i+1} | {e.car} | {e.carClass} | Score - 
       {e.deductions.length>0 && <>({e.deductions.join(", ")}) </>}
@@ -198,7 +186,9 @@ export default function App(){
     </div>
   ));
 
+  // =========================
   // HOME
+  // =========================
   if(screen==="home"){
     return(
       <div style={{padding:20}}>
@@ -220,6 +210,9 @@ export default function App(){
     );
   }
 
+  // =========================
+  // ADMIN
+  // =========================
   if(screen==="admin"){
     return(
       <div style={{padding:20}}>
@@ -236,9 +229,14 @@ export default function App(){
     );
   }
 
+  // =========================
+  // SETUP
+  // =========================
   if(screen==="setup"){
     return(
       <div style={{padding:20}}>
+        <h2>Event Setup</h2>
+
         <input
           placeholder="Event Name"
           value={eventName}
@@ -262,10 +260,14 @@ export default function App(){
     );
   }
 
+  // =========================
+  // JUDGE SELECT
+  // =========================
   if(screen==="judge"){
     return(
       <div style={{padding:20}}>
         <h2>Select Judge</h2>
+
         {judges.map((j,i)=>(
           <button key={i} style={big}
             onClick={()=>{setActiveJudge(j);setScreen("score")}}>
@@ -276,6 +278,9 @@ export default function App(){
     );
   }
 
+  // =========================
+  // SCORE SHEET (RESTORED)
+  // =========================
   if(screen==="score"){
     return(
       <div style={{padding:20}}>
@@ -312,6 +317,21 @@ export default function App(){
             ))}
           </div>
         ))}
+
+        <div>
+          <button style={tyres.left?active:btn} onClick={()=>setTyres({...tyres,left:!tyres.left})}>Left Tyre</button>
+          <button style={tyres.right?active:btn} onClick={()=>setTyres({...tyres,right:!tyres.right})}>Right Tyre</button>
+        </div>
+
+        <div>
+          {deductionsList.map(d=>(
+            <button key={d}
+              style={deductions[d]?active:btn}
+              onClick={()=>setDeductions({...deductions,[d]:!deductions[d]})}>
+              {d}
+            </button>
+          ))}
+        </div>
 
         <button style={big} onClick={submit}>
           {saving ? "Saving..." : "Submit & Next"}
