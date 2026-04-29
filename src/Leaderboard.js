@@ -17,18 +17,23 @@ export default function Leaderboard({ eventName }) {
       const carTotals = {};
 
       scores.forEach((entry) => {
-        const key = entry.carName;
+        // 🔑 stronger key (prevents mismatch)
+        const key = `${entry.carName}-${entry.carClass}`;
 
         if (!carTotals[key]) {
           carTotals[key] = {
             carName: entry.carName,
             carClass: entry.carClass,
-            total: 0
+            total: 0,
+            judges: new Set()
           };
         }
 
-        // combine ALL judges' scores
-        carTotals[key].total += entry.total;
+        // 🔒 prevent duplicate judge counting
+        if (!carTotals[key].judges.has(entry.judgeName)) {
+          carTotals[key].total += entry.total;
+          carTotals[key].judges.add(entry.judgeName);
+        }
       });
 
       // group by class
@@ -39,7 +44,10 @@ export default function Leaderboard({ eventName }) {
           grouped[car.carClass] = [];
         }
 
-        grouped[car.carClass].push(car);
+        grouped[car.carClass].push({
+          carName: car.carName,
+          total: car.total
+        });
       });
 
       // sort each class
