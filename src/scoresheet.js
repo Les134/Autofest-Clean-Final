@@ -23,7 +23,6 @@ export default function ScoreSheet({ eventName, judgeName, eventLocked }) {
 
   const [total, setTotal] = useState(0);
 
-  // 🔥 TOTAL CALCULATION (WITH DEDUCTIONS)
   useEffect(() => {
     const base =
       (Number(scores.burnout) || 0) +
@@ -33,19 +32,15 @@ export default function ScoreSheet({ eventName, judgeName, eventLocked }) {
     const deductionCount = Object.values(deductions).filter(d => d).length;
     const deductionTotal = deductionCount * 10;
 
-    const final = base - deductionTotal;
-
-    setTotal(final);
+    setTotal(base - deductionTotal);
   }, [scores, deductions]);
 
   const handleSubmit = async () => {
-    if (eventLocked) {
-      return alert("Event is locked. No more scoring allowed.");
-    }
+    if (eventLocked) return alert("Event locked");
 
     if (!carName.trim()) return alert("Enter Car No / Rego");
-    if (!gender) return alert("Select gender first");
-    if (!carClass) return alert("Select class first");
+    if (!gender) return alert("Select gender");
+    if (!carClass) return alert("Select class");
 
     const q = query(
       collection(db, "scores"),
@@ -56,9 +51,7 @@ export default function ScoreSheet({ eventName, judgeName, eventLocked }) {
 
     const existing = await getDocs(q);
 
-    if (!existing.empty) {
-      return alert("You already scored this car");
-    }
+    if (!existing.empty) return alert("Already scored");
 
     await addDoc(collection(db, "scores"), {
       eventName,
@@ -72,7 +65,6 @@ export default function ScoreSheet({ eventName, judgeName, eventLocked }) {
       createdAt: new Date()
     });
 
-    // RESET
     setCarName("");
     setCarClass("");
     setGender("");
@@ -89,112 +81,55 @@ export default function ScoreSheet({ eventName, judgeName, eventLocked }) {
   const active = { ...btn, background: "red", color: "#fff" };
 
   return (
-    <div style={{ marginTop: 20 }}>
+    <div>
 
-      {/* 🔥 CAR INPUT (BIG + REQUIRED) */}
-      <div style={{ marginBottom: 15 }}>
-        <strong style={{ fontSize: 18 }}>Car No / Rego *</strong><br />
+      <input
+        style={{ fontSize: 26, width: "100%" }}
+        placeholder="Car No / Rego"
+        value={carName}
+        onChange={(e) => setCarName(e.target.value.toUpperCase())}
+      />
 
-        <input
-          style={{
-            fontSize: 26,
-            padding: 12,
-            width: "100%",
-            border: "2px solid #000",
-            marginTop: 5
-          }}
-          placeholder="Enter Car Number or Rego"
-          value={carName}
-          onChange={(e) =>
-            setCarName(e.target.value.toUpperCase())
-          }
-        />
+      <div>
+        <button style={gender==="Male"?active:btn} onClick={()=>setGender("Male")}>Male</button>
+        <button style={gender==="Female"?active:btn} onClick={()=>setGender("Female")}>Female</button>
       </div>
 
-      {/* GENDER */}
       <div>
-        <strong>Select Gender</strong><br />
-        <button
-          style={gender === "Male" ? active : btn}
-          onClick={() => setGender("Male")}
-        >
-          Male
-        </button>
-        <button
-          style={gender === "Female" ? active : btn}
-          onClick={() => setGender("Female")}
-        >
-          Female
-        </button>
-      </div>
-
-      {/* CLASS */}
-      <div>
-        <strong>Select Class</strong><br />
-        {["Pro", "Street"].map((c) => (
-          <button
-            key={c}
-            style={carClass === c ? active : btn}
-            onClick={() => setCarClass(c)}
-          >
+        {["Pro","Street"].map(c=>(
+          <button key={c} style={carClass===c?active:btn} onClick={()=>setCarClass(c)}>
             {c}
           </button>
         ))}
       </div>
 
-      {/* BLOCK SCORING UNTIL READY */}
       {!carName || !gender || !carClass ? (
-        <p style={{ color: "red", marginTop: 10 }}>
-          Enter Car No / Rego, Gender and Class before scoring
-        </p>
+        <p>Select required fields</p>
       ) : (
         <>
-          {/* SCORES */}
-          {["burnout", "showmanship", "crowd"].map((cat) => (
+          {["burnout","showmanship","crowd"].map(cat=>(
             <div key={cat}>
-              <strong>{cat}</strong><br />
-              {Array.from({ length: 21 }, (_, i) => (
-                <button
-                  key={i}
-                  style={scores[cat] === i ? active : btn}
-                  onClick={() =>
-                    setScores({ ...scores, [cat]: i })
-                  }
-                >
+              {Array.from({length:21},(_,i)=>(
+                <button key={i} style={scores[cat]===i?active:btn}
+                  onClick={()=>setScores({...scores,[cat]:i})}>
                   {i}
                 </button>
               ))}
             </div>
           ))}
 
-          {/* 🔥 DEDUCTIONS */}
           <div>
-            <strong>Deductions (-10 each)</strong><br />
-
-            {Object.keys(deductions).map((d) => (
-              <button
-                key={d}
-                style={deductions[d] ? active : btn}
-                onClick={() =>
-                  setDeductions({
-                    ...deductions,
-                    [d]: !deductions[d]
-                  })
-                }
-              >
+            {Object.keys(deductions).map(d=>(
+              <button key={d} style={deductions[d]?active:btn}
+                onClick={()=>setDeductions({...deductions,[d]:!deductions[d]})}>
                 {d}
               </button>
             ))}
-
-            <div style={{ marginTop: 10, color: "red" }}>
-              Deductions: -{Object.values(deductions).filter(d => d).length * 10}
-            </div>
           </div>
 
-          {/* TOTAL */}
-          <h2>Total Score: {total}</h2>
+          <h2>Total: {total}</h2>
 
-          <button onClick={handleSubmit}>Submit Score</button>
+          <button onClick={handleSubmit}>Submit</button>
         </>
       )}
     </div>
