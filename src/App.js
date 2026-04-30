@@ -86,7 +86,11 @@ export default function App(){
 
     setSaving(false);
   };
-
+  <ScoreSheet
+  eventName={eventName}
+  judgeName={activeJudge}
+  eventLocked={eventLocked}
+/>
   // SORTING
   const sorted = [...entries].sort((a,b)=>b.finalScore-a.finalScore);
   const top150 = sorted.slice(0,150);
