@@ -17,7 +17,13 @@ const classes = [
 ];
 
 const deductionsList = ["Reversing","Stopping","Barrier","Fire"];
+const lockEvent = async () => {
+  await setDoc(doc(db, "events", eventName), {
+    locked: true
+  });
+};
 
+<button onClick={lockEvent}>🔒 Lock Event</button>
 export default function App(){
 
   const [screen,setScreen] = useState("home");
