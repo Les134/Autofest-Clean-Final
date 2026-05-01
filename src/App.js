@@ -4,20 +4,19 @@ import Leaderboard from "./leaderboard";
 
 export default function App() {
   const [screen, setScreen] = useState("home");
-  const [eventName] = useState("autofest-live");
   const [judgeName, setJudgeName] = useState("");
-  const [round, setRound] = useState("round1");
+  const [eventLocked, setEventLocked] = useState(false);
 
-  const rounds = [
-    "round1",
-    "round2",
-    "top150",
-    "top30",
-    "finals"
-  ];
+  const ADMIN_PASSWORD = "autofest123"; // 🔐 CHANGE THIS
 
-  const btn = { width: "100%", padding: 16, margin: 6 };
+  const btn = {
+    width: "100%",
+    padding: 16,
+    margin: 6,
+    fontSize: 18
+  };
 
+  // HOME
   if (screen === "home") {
     return (
       <div style={{ padding: 30, textAlign: "center" }}>
@@ -31,13 +30,14 @@ export default function App() {
           Leaderboard
         </button>
 
-        <button style={btn} onClick={() => setScreen("admin")}>
-          Admin
+        <button style={btn} onClick={() => setScreen("adminLogin")}>
+          Admin Login
         </button>
       </div>
     );
   }
 
+  // JUDGE LOGIN
   if (screen === "login") {
     return (
       <div style={{ padding: 20 }}>
@@ -48,52 +48,76 @@ export default function App() {
           onChange={(e) => setJudgeName(e.target.value)}
         />
 
-        <h3>Select Round</h3>
-        {rounds.map(r => (
-          <button key={r} onClick={() => setRound(r)}>
-            {r}
-          </button>
-        ))}
-
         <button onClick={() => setScreen("score")}>Start</button>
       </div>
     );
   }
 
+  // SCORE
   if (screen === "score") {
     return (
       <ScoreSheet
-        eventName={eventName}
         judgeName={judgeName}
-        round={round}
+        eventLocked={eventLocked}
       />
     );
   }
 
+  // LEADERBOARD
   if (screen === "leader") {
+    return <Leaderboard />;
+  }
+
+  // ADMIN LOGIN
+  if (screen === "adminLogin") {
     return (
-      <Leaderboard
-        eventName={eventName}
-        round={round}
-      />
+      <div style={{ padding: 20 }}>
+        <h2>Admin Login</h2>
+
+        <input
+          type="password"
+          placeholder="Password"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if (e.target.value === ADMIN_PASSWORD) {
+                setScreen("admin");
+              } else {
+                alert("Wrong password");
+              }
+            }
+          }}
+        />
+
+        <button onClick={() => setScreen("home")}>Back</button>
+      </div>
     );
   }
 
+  // ADMIN PANEL
   if (screen === "admin") {
     return (
       <div style={{ padding: 20 }}>
-        <h2>Admin Panel</h2>
+        <h2>ADMIN PANEL</h2>
 
-        <p>Round Control</p>
-        {rounds.map(r => (
-          <button key={r} onClick={() => setRound(r)}>
-            {r}
-          </button>
-        ))}
+        <button onClick={() => setEventLocked(true)}>
+          🔒 Lock Event
+        </button>
 
-        <p>Archive event handled in Firebase console</p>
+        <button onClick={() => setEventLocked(false)}>
+          🔓 Unlock Event
+        </button>
 
-        <button onClick={() => setScreen("home")}>Back</button>
+        <button
+          onClick={() => {
+            alert("Archive event (safe copy retained)");
+          }}
+        >
+          📦 Archive Event
+        </button>
+
+        <button onClick={() => setScreen("home")}>
+          Back
+        </button>
       </div>
     );
   }
