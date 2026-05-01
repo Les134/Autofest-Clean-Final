@@ -1,126 +1,136 @@
 // deploy trigger
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ScoreSheet from "./scoresheet";
 import Leaderboard from "./leaderboard";
 
+import { db } from "./firebase";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
+
 export default function App() {
   const [screen, setScreen] = useState("home");
-  const [judgeName, setJudgeName] = useState("");
+  const [eventName, setEventName] = useState("");
+  const [judges, setJudges] = useState(["", "", "", "", "", ""]);
+  const [activeJudge, setActiveJudge] = useState("");
   const [eventLocked, setEventLocked] = useState(false);
 
-  const ADMIN_PASSWORD = "autofest123"; // 🔐 CHANGE THIS
+  useEffect(() => {
+    if (!eventName) return;
+    const unsub = onSnapshot(doc(db, "events", eventName), (snap) => {
+      if (snap.exists()) setEventLocked(snap.data().locked);
+    });
+    return () => unsub();
+  }, [eventName]);
 
-  const btn = {
-    width: "100%",
-    padding: 16,
-    margin: 6,
-    fontSize: 18
+  const startEvent = async () => {
+    const valid = judges.filter(j => j.trim());
+    if (!eventName) return alert("Enter event name");
+    if (!valid.length) return alert("Add judges");
+
+    setJudges(valid);
+    await setDoc(doc(db, "events", eventName), { locked: false });
+    setScreen("judge");
   };
 
-  // HOME
+  const btn = {
+    padding: 16,
+    margin: 10,
+    fontSize: 20,
+    width: "100%",
+    maxWidth: 300
+  };
+
   if (screen === "home") {
     return (
-      <div style={{ padding: 30, textAlign: "center" }}>
-        <h1>🔥 AUTOFEST LIVE SYNC 🔥</h1>
+      <div style={{ textAlign: "center", padding: 40 }}>
+        <h1>🏁 AUTOFEST SERIES</h1>
 
-        <button style={btn} onClick={() => setScreen("login")}>
-          Judge Login
+        <button style={btn} onClick={() => setScreen("setup")}>
+          START EVENT
+        </button>
+
+        <button style={btn} onClick={() => setScreen("judge")}>
+          JUDGE LOGIN
         </button>
 
         <button style={btn} onClick={() => setScreen("leader")}>
-          Leaderboard
-        </button>
-
-        <button style={btn} onClick={() => setScreen("adminLogin")}>
-          Admin Login
+          LEADERBOARD
         </button>
       </div>
     );
   }
 
-  // JUDGE LOGIN
-  if (screen === "login") {
+  if (screen === "setup") {
     return (
       <div style={{ padding: 20 }}>
-        <h2>Judge Login</h2>
+        <h2>EVENT SETUP</h2>
 
         <input
-          placeholder="Judge Name"
-          onChange={(e) => setJudgeName(e.target.value)}
+          style={{ fontSize: 20, padding: 10, width: "100%" }}
+          placeholder="Event Name"
+          value={eventName}
+          onChange={(e) => setEventName(e.target.value)}
         />
 
-        <button onClick={() => setScreen("score")}>Start</button>
+        {judges.map((j, i) => (
+          <input
+            key={i}
+            style={{ marginTop: 10, width: "100%" }}
+            placeholder={`Judge ${i + 1}`}
+            onChange={(e) => {
+              const copy = [...judges];
+              copy[i] = e.target.value;
+              setJudges(copy);
+            }}
+          />
+        ))}
+
+        <button style={btn} onClick={startEvent}>
+          START
+        </button>
       </div>
     );
   }
 
-  // SCORE
+  if (screen === "judge") {
+    return (
+      <div style={{ padding: 20 }}>
+        <h2>SELECT JUDGE</h2>
+
+        {judges.map((j, i) => (
+          <button
+            key={i}
+            style={btn}
+            onClick={() => {
+              setActiveJudge(j);
+              setScreen("score");
+            }}
+          >
+            {j}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   if (screen === "score") {
     return (
-      <ScoreSheet
-        judgeName={judgeName}
-        eventLocked={eventLocked}
-      />
-    );
-  }
-
-  // LEADERBOARD
-  if (screen === "leader") {
-    return <Leaderboard />;
-  }
-
-  // ADMIN LOGIN
-  if (screen === "adminLogin") {
-    return (
       <div style={{ padding: 20 }}>
-        <h2>Admin Login</h2>
+        <h2>{eventName}</h2>
+        <h3>{activeJudge}</h3>
 
-        <input
-          type="password"
-          placeholder="Password"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              if (e.target.value === ADMIN_PASSWORD) {
-                setScreen("admin");
-              } else {
-                alert("Wrong password");
-              }
-            }
-          }}
+        {eventLocked && <h2 style={{ color: "red" }}>LOCKED</h2>}
+
+        <ScoreSheet
+          eventName={eventName}
+          judgeName={activeJudge}
+          eventLocked={eventLocked}
         />
-
-        <button onClick={() => setScreen("home")}>Back</button>
       </div>
     );
   }
 
-  // ADMIN PANEL
-  if (screen === "admin") {
-    return (
-      <div style={{ padding: 20 }}>
-        <h2>ADMIN PANEL</h2>
-
-        <button onClick={() => setEventLocked(true)}>
-          🔒 Lock Event
-        </button>
-
-        <button onClick={() => setEventLocked(false)}>
-          🔓 Unlock Event
-        </button>
-
-        <button
-          onClick={() => {
-            alert("Archive event (safe copy retained)");
-          }}
-        >
-          📦 Archive Event
-        </button>
-
-        <button onClick={() => setScreen("home")}>
-          Back
-        </button>
-      </div>
-    );
+  if (screen === "leader") {
+    return <Leaderboard eventName={eventName} />;
   }
 
   return null;
