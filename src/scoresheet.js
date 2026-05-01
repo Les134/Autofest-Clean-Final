@@ -78,7 +78,9 @@ export default function ScoreSheet({ eventName, judgeName, eventLocked }) {
       total,
       createdAt: new Date()
     });
-
+    if (eventLocked) {
+  return alert("Event locked — scoring disabled");
+}
     // 🔥 CLEAR FORM (LIKE YOUR OLD VERSION)
     setCar("");
     setGender("");
