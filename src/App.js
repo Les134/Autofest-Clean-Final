@@ -7,11 +7,9 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
 export default function App() {
   const [screen, setScreen] = useState("home");
-
   const [eventName, setEventName] = useState("");
   const [judges, setJudges] = useState(["", "", "", "", "", ""]);
   const [activeJudge, setActiveJudge] = useState("");
-
   const [eventLocked, setEventLocked] = useState(false);
 
   useEffect(() => {
@@ -28,7 +26,6 @@ export default function App() {
 
   const startEvent = async () => {
     const valid = judges.filter((j) => j.trim() !== "");
-
     if (!eventName) return alert("Enter event name");
     if (valid.length === 0) return alert("Add at least 1 judge");
 
@@ -49,23 +46,42 @@ export default function App() {
     await setDoc(doc(db, "events", eventName), { locked: false });
   };
 
+  const btn = {
+    padding: 12,
+    margin: 8,
+    fontSize: 18,
+    borderRadius: 6
+  };
+
+  // HOME
   if (screen === "home") {
     return (
-      <div style={{ padding: 20 }}>
+      <div style={{ textAlign: "center", padding: 30 }}>
         <h1>🏁 AUTOFEST SERIES</h1>
-        <button onClick={() => setScreen("setup")}>New Event</button>
-        <button onClick={() => setScreen("judge")}>Judge Login</button>
-        <button onClick={() => setScreen("leader")}>Leaderboard</button>
+
+        <button style={btn} onClick={() => setScreen("setup")}>
+          Start Event
+        </button>
+
+        <button style={btn} onClick={() => setScreen("judge")}>
+          Judge Login
+        </button>
+
+        <button style={btn} onClick={() => setScreen("leader")}>
+          Leaderboard
+        </button>
       </div>
     );
   }
 
+  // SETUP
   if (screen === "setup") {
     return (
       <div style={{ padding: 20 }}>
         <h2>Event Setup</h2>
 
         <input
+          style={{ fontSize: 18, padding: 10, width: "100%" }}
           placeholder="Event Name"
           value={eventName}
           onChange={(e) => setEventName(e.target.value)}
@@ -74,6 +90,7 @@ export default function App() {
         {judges.map((j, i) => (
           <input
             key={i}
+            style={{ display: "block", marginTop: 10 }}
             placeholder={`Judge ${i + 1}`}
             onChange={(e) => {
               const copy = [...judges];
@@ -83,11 +100,14 @@ export default function App() {
           />
         ))}
 
-        <button onClick={startEvent}>Start Event</button>
+        <button style={btn} onClick={startEvent}>
+          Start Event
+        </button>
       </div>
     );
   }
 
+  // JUDGE LOGIN
   if (screen === "judge") {
     return (
       <div style={{ padding: 20 }}>
@@ -96,6 +116,7 @@ export default function App() {
         {judges.map((j, i) => (
           <button
             key={i}
+            style={btn}
             onClick={() => {
               setActiveJudge(j);
               setScreen("score");
@@ -104,44 +125,41 @@ export default function App() {
             {j}
           </button>
         ))}
-
-        <button onClick={() => setScreen("home")}>Home</button>
       </div>
     );
   }
 
+  // SCORE
   if (screen === "score") {
     return (
       <div style={{ padding: 20 }}>
-        <h3>{eventName} | {activeJudge}</h3>
+        <h2>{eventName}</h2>
+        <h3>Judge: {activeJudge}</h3>
 
         {eventLocked && (
           <h2 style={{ color: "red" }}>🔒 EVENT LOCKED</h2>
         )}
 
-        <button onClick={lockEvent}>🔒 Lock</button>
-        <button onClick={unlockEvent}>🔓 Unlock</button>
+        <button onClick={lockEvent}>Lock</button>
+        <button onClick={unlockEvent}>Unlock</button>
 
         <ScoreSheet
           eventName={eventName}
           judgeName={activeJudge}
           eventLocked={eventLocked}
         />
-
-        <button onClick={() => setScreen("judge")}>Next Judge</button>
       </div>
     );
   }
 
+  // LEADERBOARD
   if (screen === "leader") {
     return (
       <div style={{ padding: 20 }}>
         <Leaderboard eventName={eventName} />
-        <button onClick={() => setScreen("home")}>Home</button>
       </div>
     );
   }
 
-  return <div>Loading...</div>;
+  return null;
 }
-
